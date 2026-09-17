@@ -84,6 +84,12 @@ export function getAsaasPayment(paymentId: string): Promise<AsaasPayment> {
     return asaasFetch<AsaasPayment>(`/payments/${paymentId}`);
 }
 
+// Cancela/exclui uma cobrança ainda não paga no Asaas (usado quando um usuário é
+// retroativamente isentado depois que o boleto do mês já tinha sido gerado).
+export function cancelAsaasPayment(paymentId: string): Promise<void> {
+    return asaasFetch<void>(`/payments/${paymentId}`, { method: "DELETE" });
+}
+
 // Status que a Asaas usa para indicar que o dinheiro já entrou (boleto compensado,
 // pix recebido ou baixa manual em dinheiro).
 export const ASAAS_PAID_STATUSES = new Set(["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"]);

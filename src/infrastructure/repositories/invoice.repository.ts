@@ -65,6 +65,10 @@ export const invoiceRepository: InvoiceRepository = {
         return prisma.invoice.update({ where: { id }, data: { status: "PAID", paidAt: new Date() } });
     },
 
+    cancel(id) {
+        return prisma.invoice.update({ where: { id }, data: { status: "CANCELED" } });
+    },
+
     updatePaymentLink(id, data: UpdateInvoicePaymentInput) {
         return prisma.invoice.update({
             where: { id },

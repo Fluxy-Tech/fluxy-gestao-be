@@ -36,5 +36,6 @@ export interface InvoiceRepository {
     findOverdueWithUser(before: Date): Promise<OverdueInvoiceWithUser[]>;
     create(userId: string, data: CreateInvoiceInput): Promise<Invoice>;
     markPaid(id: string): Promise<Invoice>;
+    cancel(id: string): Promise<Invoice>;
     updatePaymentLink(id: string, data: UpdateInvoicePaymentInput): Promise<Invoice>;
 }

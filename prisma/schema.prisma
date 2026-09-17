@@ -108,6 +108,7 @@ model User {
   debts         Debt[]
   invoices      Invoice[]
   cashMovements CashMovement[]
+  serviceInvoices ServiceInvoice[]
 
   @@map("user")
 }
@@ -187,8 +188,14 @@ model Client {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders Order[]
+  // Sequência própria de numeração de nota fiscal de serviço, independente de outros
+  // clientes — cada cliente começa do 1 (ver ServiceInvoice e o padrão já usado em
+  // User.orderSequence para as OS).
+  noteSequence BigInt @default(0)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          Order[]
+  serviceInvoices ServiceInvoice[]
 
   @@index([userId])
   @@map("client")
@@ -278,11 +285,17 @@ model Order {
   nextOccurrenceAt  DateTime?
   recurringParentId String?
 
+  // Trava a OS numa nota fiscal de serviço enquanto ela estiver ISSUED/SETTLED — fica
+  // null de novo se a nota for cancelada (ver ServiceInvoice), liberando a OS para entrar
+  // em outra nota.
+  serviceInvoiceId String?
+
   user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   client           Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
   orderItems       OrderItem[]
   recurringParent  Order?      @relation("OrderRecurrence", fields: [recurringParentId], references: [id], onDelete: SetNull)
   recurringChildren Order[]    @relation("OrderRecurrence")
+  serviceInvoice   ServiceInvoice? @relation(fields: [serviceInvoiceId], references: [id], onDelete: SetNull)
 
   @@unique([userId, numberOrder])
   @@index([userId])
@@ -291,6 +304,7 @@ model Order {
   @@index([statusOrder])
   @@index([nextOccurrenceAt])
   @@index([recurringParentId])
+  @@index([serviceInvoiceId])
   @@map("order")
 }
 
@@ -313,6 +327,45 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_item")
+}
+
+// Nota fiscal de serviço: agrupa OS já existentes de um cliente sob um número
+// sequencial próprio do cliente (começa em 1, independente de outros clientes — ver
+// Client.noteSequence). ISSUED = emitida; SETTLED = "dar baixa" (as OS vinculadas viram
+// PAID); CANCELED = cancelada, nunca deletada — as OS que ela travou voltam a ficar livres
+// (Order.serviceInvoiceId volta a null).
+enum ServiceInvoiceStatus {
+  ISSUED
+  SETTLED
+  CANCELED
+}
+
+model ServiceInvoice {
+  id           String               @id @default(cuid())
+  userId       String
+  clientId     String
+  number       BigInt
+  issueDate    DateTime             @default(now())
+  // Soma do totalSale das OS vinculadas no momento da criação — não recalculado depois,
+  // é o valor "impresso" na nota.
+  totalAmount  Decimal              @default(0) @db.Decimal(14, 2)
+  status       ServiceInvoiceStatus @default(ISSUED)
+  settledAt    DateTime?
+  canceledAt   DateTime?
+  cancelReason String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  orders Order[]
+
+  @@unique([clientId, number])
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@index([issueDate])
+  @@map("service_invoice")
 }
 
 // ===================== Financeiro =====================
@@ -417,6 +470,7 @@ model CashMovement {
 enum InvoiceStatus {
   PENDING
   PAID
+  CANCELED
 }
 
 model Invoice {

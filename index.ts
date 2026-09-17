@@ -8,6 +8,7 @@ import { requireInternalService } from "./src/infrastructure/auth/require-intern
 import { clientRoutes } from "./src/presentation/routes/client.routes";
 import { serviceRoutes } from "./src/presentation/routes/service.routes";
 import { orderRoutes } from "./src/presentation/routes/order.routes";
+import { serviceInvoiceRoutes } from "./src/presentation/routes/service-invoice.routes";
 import { userRoutes } from "./src/presentation/routes/user.routes";
 import { adminRoutes } from "./src/presentation/routes/admin.routes";
 import { publicRoutes } from "./src/presentation/routes/public.routes";
@@ -42,6 +43,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/clients", requireAuth, requireActiveBilling, clientRoutes);
 app.use("/api/services", requireAuth, requireActiveBilling, serviceRoutes);
 app.use("/api/orders", requireAuth, requireActiveBilling, orderRoutes);
+app.use("/api/service-invoices", requireAuth, requireActiveBilling, serviceInvoiceRoutes);
 app.use("/api/users", requireAuth, userRoutes);
 app.use("/api/admin", requireAuth, requireAdmin, adminRoutes);
 app.use("/api/expenses", requireAuth, requireActiveBilling, expenseRoutes);

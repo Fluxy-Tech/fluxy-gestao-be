@@ -25,7 +25,7 @@ export const adminController = {
     },
 
     async setBillingExempt(req: Request, res: Response) {
-        await setBillingExemptUsecase(userRepository, auditLogRepository, req.params.userId as string, req.body);
+        await setBillingExemptUsecase(userRepository, auditLogRepository, invoiceRepository, req.params.userId as string, req.body);
         res.json({ ok: true });
     },
 };

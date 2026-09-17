@@ -28,9 +28,10 @@ export function toAsaasDate(date: Date): string {
     return date.toISOString().slice(0, 10);
 }
 
-export type InvoiceDisplayStatus = "paid" | "open" | "overdue";
+export type InvoiceDisplayStatus = "paid" | "open" | "overdue" | "canceled";
 
 export function invoiceDisplayStatus(status: string, dueDate: Date, now = new Date()): InvoiceDisplayStatus {
     if (status === "PAID") return "paid";
+    if (status === "CANCELED") return "canceled";
     return dueDate < now ? "overdue" : "open";
 }
