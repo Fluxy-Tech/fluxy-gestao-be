@@ -55,7 +55,10 @@ export const orderRepository: OrderRepository = {
     findByClientId(userId, clientId) {
         return prisma.order.findMany({
             where: { userId, clientId, deletedAt: null },
-            include: { orderItems: { include: { service: { select: { name: true } } } } },
+            include: {
+                orderItems: { include: { service: { select: { name: true } } } },
+                serviceInvoice: { select: { status: true } },
+            },
             orderBy: { entryDate: "desc" },
         }).then((orders) =>
             orders.map(({ orderItems, ...rest }) => ({ ...rest, items: orderItems }) as any),

@@ -22,7 +22,9 @@ export interface ServiceInvoiceRepository {
     findDetailById(id: string, userId: string): Promise<ServiceInvoiceWithClient | null>;
     createWithOrders(userId: string, data: CreateServiceInvoiceInput): Promise<ServiceInvoice>;
     cancel(id: string, userId: string, cancelReason?: string | null): Promise<ServiceInvoice>;
+    reopen(id: string, userId: string): Promise<ServiceInvoice>;
     settle(id: string, userId: string): Promise<ServiceInvoice>;
+    updateOrders(id: string, userId: string, orderIds: string[]): Promise<ServiceInvoice>;
 }
 
 export type { ServiceInvoiceStatus };

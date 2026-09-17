@@ -5,6 +5,8 @@ import { auditLogRepository } from "../../infrastructure/repositories/audit-log.
 import { listServiceInvoicesUsecase } from "../../application/usecases/service-invoice/list-service-invoices.usecase";
 import { createServiceInvoiceUsecase } from "../../application/usecases/service-invoice/create-service-invoice.usecase";
 import { cancelServiceInvoiceUsecase } from "../../application/usecases/service-invoice/cancel-service-invoice.usecase";
+import { reopenServiceInvoiceUsecase } from "../../application/usecases/service-invoice/reopen-service-invoice.usecase";
+import { updateServiceInvoiceOrdersUsecase } from "../../application/usecases/service-invoice/update-service-invoice-orders.usecase";
 import { settleServiceInvoiceUsecase } from "../../application/usecases/service-invoice/settle-service-invoice.usecase";
 import { serialize } from "../serialize";
 
@@ -42,6 +44,27 @@ export const serviceInvoiceController = {
             auditLogRepository,
             req.userId,
             req.params.id as string,
+        );
+        res.json(serialize(invoice));
+    },
+
+    async reopen(req: Request, res: Response) {
+        const invoice = await reopenServiceInvoiceUsecase(
+            serviceInvoiceRepository,
+            auditLogRepository,
+            req.userId,
+            req.params.id as string,
+        );
+        res.json(serialize(invoice));
+    },
+
+    async updateOrders(req: Request, res: Response) {
+        const invoice = await updateServiceInvoiceOrdersUsecase(
+            serviceInvoiceRepository,
+            auditLogRepository,
+            req.userId,
+            req.params.id as string,
+            req.body,
         );
         res.json(serialize(invoice));
     },

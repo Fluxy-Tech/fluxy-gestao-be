@@ -1,4 +1,11 @@
-import type { Client, Order, OrderItem, OrderStatus, PaymentStatus } from "../../../generated/prisma/client";
+import type {
+    Client,
+    Order,
+    OrderItem,
+    OrderStatus,
+    PaymentStatus,
+    ServiceInvoiceStatus,
+} from "../../../generated/prisma/client";
 
 export interface CreateOrderItemInput {
     serviceId: string;
@@ -42,7 +49,10 @@ export type OrderDetail = Order & {
     items: OrderItemWithServiceName[];
     recurringParent: { numberOrder: bigint } | null;
 };
-export type OrderWithItems = Order & { items: OrderItemWithServiceName[] };
+export type OrderWithItems = Order & {
+    items: OrderItemWithServiceName[];
+    serviceInvoice: { status: ServiceInvoiceStatus } | null;
+};
 
 export interface DashboardCounts {
     todayCount: number;

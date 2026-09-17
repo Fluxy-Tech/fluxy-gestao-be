@@ -42,14 +42,21 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
         return prisma.$transaction(async (tx) => {
             const orders = await tx.order.findMany({
                 where: { id: { in: data.orderIds }, userId, clientId: data.clientId, deletedAt: null },
-                select: { id: true, totalSale: true, serviceInvoiceId: true },
+                select: {
+                    id: true,
+                    totalSale: true,
+                    serviceInvoiceId: true,
+                    serviceInvoice: { select: { status: true } },
+                },
             });
 
             if (orders.length !== data.orderIds.length) {
                 throw new Error("Uma ou mais OS selecionadas não pertencem a este cliente.");
             }
-            if (orders.some((o) => o.serviceInvoiceId !== null)) {
-                throw new Error("Uma ou mais OS selecionadas já estão vinculadas a outra nota.");
+            // Uma OS só pode entrar numa nota nova se não estiver em nenhuma, ou se a nota
+            // atual dela já estiver CANCELED/SETTLED (ver comentário em Order.serviceInvoiceId).
+            if (orders.some((o) => o.serviceInvoiceId && o.serviceInvoice?.status === "ISSUED")) {
+                throw new Error("Uma ou mais OS selecionadas já estão vinculadas a outra nota em aberto.");
             }
 
             const [{ noteSequence }] = await tx.$queryRaw<{ noteSequence: bigint }[]>`
@@ -78,19 +85,87 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
         });
     },
 
-    async cancel(id, userId, cancelReason) {
+    cancel(id, userId, cancelReason) {
+        // O vínculo das OS é preservado (ver comentário em Order.serviceInvoiceId) — elas só
+        // ficam disponíveis para outra nota por já apontarem pra uma nota CANCELED/SETTLED.
+        return prisma.serviceInvoice.update({
+            where: { id, userId },
+            data: { status: "CANCELED", canceledAt: new Date(), cancelReason: cancelReason ?? null },
+            include: includeClientAndOrders,
+        });
+    },
+
+    reopen(id, userId) {
+        return prisma.serviceInvoice.update({
+            where: { id, userId },
+            data: { status: "ISSUED", canceledAt: null, cancelReason: null },
+            include: includeClientAndOrders,
+        });
+    },
+
+    async updateOrders(id, userId, orderIds) {
         return prisma.$transaction(async (tx) => {
-            const invoice = await tx.serviceInvoice.update({
-                where: { id, userId },
-                data: { status: "CANCELED", canceledAt: new Date(), cancelReason: cancelReason ?? null },
-            });
+            const invoice = await tx.serviceInvoice.findFirst({ where: { id, userId } });
+            if (!invoice) throw new Error("Nota fiscal não encontrada.");
+            if (invoice.status !== "ISSUED") {
+                throw new Error("Só é possível alterar as OS de uma nota emitida.");
+            }
 
-            await tx.order.updateMany({
+            const currentOrders = await tx.order.findMany({
                 where: { serviceInvoiceId: id },
-                data: { serviceInvoiceId: null },
+                select: { id: true },
             });
+            const currentIds = new Set(currentOrders.map((o) => o.id));
+            const nextIds = new Set(orderIds);
 
-            return invoice;
+            const toRemove = [...currentIds].filter((oid) => !nextIds.has(oid));
+            const toAdd = [...nextIds].filter((oid) => !currentIds.has(oid));
+
+            if (toAdd.length > 0) {
+                const candidates = await tx.order.findMany({
+                    where: { id: { in: toAdd }, userId, clientId: invoice.clientId, deletedAt: null },
+                    select: {
+                        id: true,
+                        serviceInvoiceId: true,
+                        serviceInvoice: { select: { status: true } },
+                    },
+                });
+                if (candidates.length !== toAdd.length) {
+                    throw new Error("Uma ou mais OS selecionadas não pertencem a este cliente.");
+                }
+                if (
+                    candidates.some(
+                        (o) => o.serviceInvoiceId && o.serviceInvoiceId !== id && o.serviceInvoice?.status === "ISSUED",
+                    )
+                ) {
+                    throw new Error("Uma ou mais OS selecionadas já estão vinculadas a outra nota em aberto.");
+                }
+            }
+
+            if (toRemove.length > 0) {
+                await tx.order.updateMany({
+                    where: { id: { in: toRemove }, serviceInvoiceId: id },
+                    data: { serviceInvoiceId: null },
+                });
+            }
+            if (toAdd.length > 0) {
+                await tx.order.updateMany({
+                    where: { id: { in: toAdd } },
+                    data: { serviceInvoiceId: id },
+                });
+            }
+
+            const linkedOrders = await tx.order.findMany({
+                where: { serviceInvoiceId: id },
+                select: { totalSale: true },
+            });
+            const totalAmount = linkedOrders.reduce((sum, o) => sum + Number(o.totalSale), 0);
+
+            return tx.serviceInvoice.update({
+                where: { id },
+                data: { totalAmount },
+                include: includeClientAndOrders,
+            });
         });
     },
 

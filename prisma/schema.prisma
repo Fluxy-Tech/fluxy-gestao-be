@@ -285,9 +285,10 @@ model Order {
   nextOccurrenceAt  DateTime?
   recurringParentId String?
 
-  // Trava a OS numa nota fiscal de serviço enquanto ela estiver ISSUED/SETTLED — fica
-  // null de novo se a nota for cancelada (ver ServiceInvoice), liberando a OS para entrar
-  // em outra nota.
+  // Trava a OS numa nota fiscal de serviço. Cancelar a nota NÃO limpa este campo — o
+  // vínculo histórico é preservado (ver ServiceInvoice.cancel). A OS só pode ser
+  // colocada em outra nota se a nota atual estiver CANCELED ou SETTLED (ver
+  // service-invoice.repository.ts), e nesse caso o campo é reatribuído para a nova nota.
   serviceInvoiceId String?
 
   user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -332,8 +333,9 @@ model OrderItem {
 // Nota fiscal de serviço: agrupa OS já existentes de um cliente sob um número
 // sequencial próprio do cliente (começa em 1, independente de outros clientes — ver
 // Client.noteSequence). ISSUED = emitida; SETTLED = "dar baixa" (as OS vinculadas viram
-// PAID); CANCELED = cancelada, nunca deletada — as OS que ela travou voltam a ficar livres
-// (Order.serviceInvoiceId volta a null).
+// PAID); CANCELED = cancelada, nunca deletada — pode ser reaberta (volta a ISSUED). O
+// vínculo das OS não é desfeito ao cancelar; elas só podem entrar em outra nota
+// enquanto esta estiver CANCELED ou SETTLED.
 enum ServiceInvoiceStatus {
   ISSUED
   SETTLED
