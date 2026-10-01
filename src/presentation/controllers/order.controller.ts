@@ -13,6 +13,7 @@ import {
     updatePaymentStatusUsecase,
 } from "../../application/usecases/order/update-order-status.usecase";
 import { updateOrderScheduleUsecase } from "../../application/usecases/order/update-order-schedule.usecase";
+import { updateOrderNotesUsecase } from "../../application/usecases/order/update-order-notes.usecase";
 import { stopOrderRecurrenceUsecase } from "../../application/usecases/order/stop-order-recurrence.usecase";
 import { deleteOrderUsecase } from "../../application/usecases/order/delete-order.usecase";
 import { getDashboardUsecase } from "../../application/usecases/order/get-dashboard.usecase";
@@ -76,6 +77,17 @@ export const orderController = {
         const order = await updateOrderScheduleUsecase(
             orderRepository,
             userRepository,
+            auditLogRepository,
+            req.userId,
+            req.params.id as string,
+            req.body,
+        );
+        res.json(serialize(order));
+    },
+
+    async updateNotes(req: Request, res: Response) {
+        const order = await updateOrderNotesUsecase(
+            orderRepository,
             auditLogRepository,
             req.userId,
             req.params.id as string,

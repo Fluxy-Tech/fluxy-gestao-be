@@ -93,6 +93,7 @@ export interface OrderRepository {
     ): Promise<Order>;
     updatePaymentStatus(id: string, userId: string, data: UpdatePaymentInput): Promise<Order>;
     updateDeliveryDate(id: string, userId: string, deliveryDate: Date | null): Promise<Order>;
+    updateNotes(id: string, userId: string, notes: string | null): Promise<Order>;
     stopRecurrence(id: string, userId: string): Promise<Order>;
     softDelete(id: string, userId: string): Promise<void>;
 }

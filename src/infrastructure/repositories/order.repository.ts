@@ -295,6 +295,13 @@ export const orderRepository: OrderRepository = {
         });
     },
 
+    updateNotes(id, userId, notes) {
+        return prisma.order.update({
+            where: { id, userId },
+            data: { notes },
+        });
+    },
+
     stopRecurrence(id, userId) {
         return prisma.order.update({
             where: { id, userId },

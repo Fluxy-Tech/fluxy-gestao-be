@@ -44,6 +44,10 @@ export const updatePaymentStatusSchema = z.object({
     amountPaid: z.number().min(0).optional(),
 });
 
+export const updateNotesSchema = z.object({
+    notes: z.string().nullable(),
+});
+
 export const updateScheduleSchema = z.object({
     deliveryDate: z.string().min(1, "Informe a data e hora do agendamento."),
 });
