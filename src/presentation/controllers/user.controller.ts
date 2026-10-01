@@ -6,8 +6,14 @@ import { updateCompanyUsecase } from "../../domain/user/update-company.usecase";
 import { updateBrandUsecase } from "../../domain/user/update-brand.usecase";
 import { uploadToS3 } from "../../infrastructure/storage/s3-storage";
 import { serialize } from "../serialize";
+import { exportUserDataUsecase } from "../../application/usecases/user/export-user-data.usecase";
 
 export const userController = {
+    async exportData(req: Request, res: Response) {
+        const data = await exportUserDataUsecase(req.userId);
+        res.json(serialize(data));
+    },
+
     async me(req: Request, res: Response) {
         const user = await userRepository.findById(req.userId);
         res.json(serialize(user));

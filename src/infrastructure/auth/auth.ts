@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins/admin";
+import { expo } from "@better-auth/expo";
 import { prisma } from "../database/prisma";
 import { sendMail } from "../email/mailer";
 import { resetPasswordEmailTemplate, verificationEmailTemplate } from "../email/templates";
@@ -10,7 +11,15 @@ import { normalizePhoneForStorage } from "../../domain/validation/normalize-phon
 export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
-    trustedOrigins: (process.env.FRONTEND_URL ?? "http://localhost:6502").split(","),
+    trustedOrigins: [
+        ...(process.env.FRONTEND_URL ?? "http://localhost:6502").split(","),
+        // App mobile (fluxy-gestao-app): o plugin expo() repassa o scheme do app como
+        // origem. "exp://" é o Expo Go, usado para rodar o app sem build nativo —
+        // navegadores nunca enviam essa origem, então liberá-la não abre CSRF.
+        "fluxygestao://",
+        "exp://",
+        "exp://**",
+    ],
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
@@ -78,7 +87,7 @@ export const auth = betterAuth({
             billingExempt: { type: "boolean", required: false, defaultValue: false, input: false },
         },
     },
-    plugins: [admin()],
+    plugins: [admin(), expo()],
     databaseHooks: {
         user: {
             create: {
