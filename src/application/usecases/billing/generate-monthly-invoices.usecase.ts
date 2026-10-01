@@ -1,16 +1,18 @@
 import type { UserRepository } from "../../../domain/repository/user.repository";
 import type { InvoiceRepository } from "../../../domain/repository/invoice.repository";
-import { lastDayOfMonth, monthKey, planPrice, startOfMonth, toAsaasDate } from "../../../domain/billing";
+import type { PlanRepository } from "../../../domain/repository/plan.repository";
+import { lastDayOfMonth, monthKey, startOfMonth, toAsaasDate } from "../../../domain/billing";
 import { createAsaasPayment } from "../../../infrastructure/payment/asaas.client";
 import { sendMail } from "../../../infrastructure/email/mailer";
 import { invoiceEmailTemplate } from "../../../infrastructure/email/templates";
 import { ensureAsaasCustomer } from "./ensure-asaas-customer";
 
-// Gera a fatura do mês corrente para todo usuário pagante que já passou do primeiro
+// Gera a fatura do mês corrente (no valor do plano do usuário) para todo usuário pagante que já passou do primeiro
 // mês (gratuito) na plataforma e ainda não tem fatura para este mês de competência.
 export async function generateMonthlyInvoicesUsecase(
     userRepo: UserRepository,
     invoiceRepo: InvoiceRepository,
+    planRepo: PlanRepository,
     now = new Date(),
 ): Promise<{ generated: number; failed: number }> {
     const currentMonthStart = startOfMonth(now);
@@ -27,14 +29,18 @@ export async function generateMonthlyInvoicesUsecase(
             const existing = await invoiceRepo.findByUserAndMonth(user.id, referenceMonth);
             if (existing) continue;
 
+            // Valor do plano atual do usuário no momento da geração da fatura.
+            const plan = await planRepo.findBySlug(user.plan);
+            if (!plan) throw new Error(`plano "${user.plan}" não encontrado`);
+            const amount = Number(plan.price);
+
             const customerId = await ensureAsaasCustomer(userRepo, user);
-            const amount = planPrice(user.plan);
 
             const payment = await createAsaasPayment({
                 customerId,
                 value: amount,
                 dueDate: toAsaasDate(dueDate),
-                description: `Assinatura Fluxy Gestão — competência ${referenceMonth}`,
+                description: `Assinatura Fluxy Gestão (plano ${plan.name}) — competência ${referenceMonth}`,
                 externalReference: `${user.id}:${referenceMonth}`,
             });
 

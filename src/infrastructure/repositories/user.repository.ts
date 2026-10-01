@@ -83,6 +83,14 @@ export const userRepository: UserRepository = {
         await prisma.user.update({ where: { id }, data: { billingBlocked: blocked } });
     },
 
+    setPlan(id, plan) {
+        return prisma.user.update({ where: { id }, data: { plan } });
+    },
+
+    setDashboardView(id, dashboardView) {
+        return prisma.user.update({ where: { id }, data: { dashboardView } });
+    },
+
     setContractAcceptance(id, accepted) {
         return prisma.user.update({
             where: { id },

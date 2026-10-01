@@ -3,6 +3,7 @@ import { orderRepository } from "../../infrastructure/repositories/order.reposit
 import { clientRepository } from "../../infrastructure/repositories/client.repository";
 import { userRepository } from "../../infrastructure/repositories/user.repository";
 import { auditLogRepository } from "../../infrastructure/repositories/audit-log.repository";
+import { planRepository } from "../../infrastructure/repositories/plan.repository";
 import { listOpenOrdersUsecase, listClosedOrdersUsecase, listReceivableOrdersUsecase, getOrderDetailUsecase } from "../../application/usecases/order/list-orders.usecase";
 import { createOrderUsecase } from "../../application/usecases/order/create-order.usecase";
 import {
@@ -44,7 +45,15 @@ export const orderController = {
     },
 
     async create(req: Request, res: Response) {
-        const order = await createOrderUsecase(orderRepository, clientRepository, userRepository, auditLogRepository, req.userId, req.body);
+        const order = await createOrderUsecase(
+            orderRepository,
+            clientRepository,
+            userRepository,
+            auditLogRepository,
+            planRepository,
+            req.userId,
+            req.body,
+        );
         res.status(201).json(serialize(order));
     },
 

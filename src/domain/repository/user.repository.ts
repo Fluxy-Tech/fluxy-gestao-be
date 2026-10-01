@@ -8,6 +8,7 @@ export interface UpdateProfileInput {
 
 export interface UpdateCompanyInput {
     businessCategory?: BusinessCategory;
+    businessSegment?: string;
     companyName?: string | null;
     cnpj?: string | null;
     cpf?: string | null;
@@ -51,4 +52,6 @@ export interface UserRepository {
     setBillingBlocked(id: string, blocked: boolean): Promise<void>;
     setContractAcceptance(id: string, accepted: boolean): Promise<User>;
     setBillingExempt(id: string, exempt: boolean): Promise<void>;
+    setPlan(id: string, plan: string): Promise<User>;
+    setDashboardView(id: string, view: "table" | "calendar"): Promise<User>;
 }

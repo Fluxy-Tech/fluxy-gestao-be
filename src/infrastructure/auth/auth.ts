@@ -2,7 +2,9 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins/admin";
 import { expo } from "@better-auth/expo";
+import { APIError } from "better-auth/api";
 import { prisma } from "../database/prisma";
+import { planRepository } from "../repositories/plan.repository";
 import { sendMail } from "../email/mailer";
 import { resetPasswordEmailTemplate, verificationEmailTemplate } from "../email/templates";
 import { auditLogRepository } from "../repositories/audit-log.repository";
@@ -72,8 +74,11 @@ export const auth = betterAuth({
             primaryColor: { type: "string", required: false, defaultValue: "#8c52ff" },
             pdfColor: { type: "string", required: false, defaultValue: "#8c52ff" },
             includeLogoInPdf: { type: "boolean", required: false, defaultValue: true },
-            // Plano único — mantido apenas para referência de billing. Não editável pelo cliente.
-            plan: { type: "string", required: false, defaultValue: "mensal", input: false },
+            // Plano de assinatura (slug de Plan), escolhido no cadastro — validado no hook
+            // user.create.before abaixo. Depois do cadastro, só muda por PATCH /api/users/me/plan
+            // (com validação de downgrade) ou pelo admin; o update-user genérico do better-auth
+            // não aceita "plan" (ver databaseHooks.user.update.before).
+            plan: { type: "string", required: false, defaultValue: "bronze", input: true },
             // Set only by the daily billing job (invoice overdue) / cleared when payment
             // is confirmed. Not client-settable.
             billingBlocked: { type: "boolean", required: false, defaultValue: false, input: false },
@@ -96,9 +101,25 @@ export const auth = betterAuth({
                 // frente. Fora daqui, edições de perfil/empresa passam pelos usecases
                 // próprios (não por este hook), que fazem a mesma normalização via
                 // updateProfileSchema/updateCompanySchema.
+                //
+                // Também valida o plano escolhido no cadastro: precisa existir e estar ativo.
                 before: async (user) => {
-                    if (typeof user.phone !== "string") return;
-                    return { data: { ...user, phone: normalizePhoneForStorage(user.phone) } };
+                    const plan = typeof user.plan === "string" && user.plan ? user.plan : "bronze";
+                    const found = await planRepository.findBySlug(plan);
+                    if (!found || !found.active) {
+                        throw new APIError("BAD_REQUEST", { message: "Plano inválido. Escolha um dos planos disponíveis." });
+                    }
+                    const phone = typeof user.phone === "string" ? normalizePhoneForStorage(user.phone) : user.phone;
+                    return { data: { ...user, plan, phone } };
+                },
+            },
+            update: {
+                // "plan" é input no cadastro, mas a troca depois dele tem regra própria
+                // (downgrade, admin) — então o update-user do better-auth nunca altera o plano.
+                before: async (user) => {
+                    if (!("plan" in user)) return;
+                    const { plan: _ignored, ...rest } = user;
+                    return { data: rest };
                 },
             },
         },

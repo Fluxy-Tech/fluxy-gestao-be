@@ -12,4 +12,7 @@ userRoutes.get("/me/export", asyncHandler(userController.exportData));
 userRoutes.patch("/me/profile", asyncHandler(userController.updateProfile));
 userRoutes.patch("/me/company", asyncHandler(userController.updateCompany));
 userRoutes.patch("/me/brand", asyncHandler(userController.updateBrand));
+userRoutes.patch("/me/preferences", asyncHandler(userController.updatePreferences));
+userRoutes.get("/me/plan", asyncHandler(userController.myPlan));
+userRoutes.patch("/me/plan", asyncHandler(userController.changeMyPlan));
 userRoutes.post("/me/logo", uploadLogo, asyncHandler(userController.uploadLogo));

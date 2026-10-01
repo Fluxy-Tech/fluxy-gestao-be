@@ -8,3 +8,7 @@ adminRoutes.get("/metrics", asyncHandler(adminController.metrics));
 adminRoutes.get("/audit-log", asyncHandler(adminController.auditLog));
 adminRoutes.get("/overdue-users", asyncHandler(adminController.overdueUsers));
 adminRoutes.patch("/users/:userId/billing-exempt", asyncHandler(adminController.setBillingExempt));
+adminRoutes.patch("/users/:userId/plan", asyncHandler(adminController.setUserPlan));
+adminRoutes.get("/plans", asyncHandler(adminController.listPlans));
+adminRoutes.post("/plans", asyncHandler(adminController.createPlan));
+adminRoutes.patch("/plans/:planId", asyncHandler(adminController.updatePlan));

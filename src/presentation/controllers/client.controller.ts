@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { clientRepository } from "../../infrastructure/repositories/client.repository";
 import { orderRepository } from "../../infrastructure/repositories/order.repository";
 import { auditLogRepository } from "../../infrastructure/repositories/audit-log.repository";
+import { userRepository } from "../../infrastructure/repositories/user.repository";
+import { planRepository } from "../../infrastructure/repositories/plan.repository";
 import { listClientsUsecase } from "../../application/usecases/client/list-clients.usecase";
 import { createClientUsecase } from "../../application/usecases/client/create-client.usecase";
 import { updateClientUsecase } from "../../application/usecases/client/update-client.usecase";
@@ -16,7 +18,14 @@ export const clientController = {
     },
 
     async create(req: Request, res: Response) {
-        const client = await createClientUsecase(clientRepository, auditLogRepository, req.userId, req.body);
+        const client = await createClientUsecase(
+            clientRepository,
+            auditLogRepository,
+            planRepository,
+            userRepository,
+            req.userId,
+            req.body,
+        );
         res.status(201).json(serialize(client));
     },
 

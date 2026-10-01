@@ -1,9 +1,5 @@
-// Preço mensal da assinatura — plano único.
-export const SUBSCRIPTION_PRICE = 19.99;
-
-export function planPrice(_plan: string): number {
-    return SUBSCRIPTION_PRICE;
-}
+// O valor da assinatura vem do plano do usuário (tabela Plan, ajustável no painel admin)
+// — ver generateMonthlyInvoicesUsecase.
 
 export function monthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;

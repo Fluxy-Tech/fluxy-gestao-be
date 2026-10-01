@@ -7,6 +7,10 @@ import { updateBrandUsecase } from "../../domain/user/update-brand.usecase";
 import { uploadToS3 } from "../../infrastructure/storage/s3-storage";
 import { serialize } from "../serialize";
 import { exportUserDataUsecase } from "../../application/usecases/user/export-user-data.usecase";
+import { updatePreferencesUsecase } from "../../domain/user/update-preferences.usecase";
+import { auditLogRepository } from "../../infrastructure/repositories/audit-log.repository";
+import { planRepository } from "../../infrastructure/repositories/plan.repository";
+import { changeMyPlanUsecase, getMyPlanUsecase } from "../../application/usecases/plan/plan.usecases";
 
 export const userController = {
     async exportData(req: Request, res: Response) {
@@ -26,6 +30,20 @@ export const userController = {
 
     async updateCompany(req: Request, res: Response) {
         const user = await updateCompanyUsecase(userRepository, req.userId, req.body);
+        res.json(serialize(user));
+    },
+
+    async updatePreferences(req: Request, res: Response) {
+        const user = await updatePreferencesUsecase(userRepository, req.userId, req.body);
+        res.json(serialize(user));
+    },
+
+    async myPlan(req: Request, res: Response) {
+        res.json(serialize(await getMyPlanUsecase(planRepository, userRepository, req.userId)));
+    },
+
+    async changeMyPlan(req: Request, res: Response) {
+        const user = await changeMyPlanUsecase(planRepository, userRepository, auditLogRepository, req.userId, req.body);
         res.json(serialize(user));
     },
 

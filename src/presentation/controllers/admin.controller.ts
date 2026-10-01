@@ -7,6 +7,13 @@ import { listOverdueUsersUsecase } from "../../application/usecases/admin/list-o
 import { setBillingExemptUsecase } from "../../application/usecases/admin/set-billing-exempt.usecase";
 import { invoiceRepository } from "../../infrastructure/repositories/invoice.repository";
 import { serialize } from "../serialize";
+import { planRepository } from "../../infrastructure/repositories/plan.repository";
+import {
+    adminSetUserPlanUsecase,
+    createPlanUsecase,
+    listAllPlansUsecase,
+    updatePlanUsecase,
+} from "../../application/usecases/plan/plan.usecases";
 
 export const adminController = {
     async metrics(req: Request, res: Response) {
@@ -27,5 +34,28 @@ export const adminController = {
     async setBillingExempt(req: Request, res: Response) {
         await setBillingExemptUsecase(userRepository, auditLogRepository, invoiceRepository, req.params.userId as string, req.body);
         res.json({ ok: true });
+    },
+
+    async setUserPlan(req: Request, res: Response) {
+        const user = await adminSetUserPlanUsecase(
+            planRepository,
+            userRepository,
+            auditLogRepository,
+            req.params.userId as string,
+            req.body,
+        );
+        res.json(serialize(user));
+    },
+
+    async listPlans(_req: Request, res: Response) {
+        res.json(serialize(await listAllPlansUsecase(planRepository)));
+    },
+
+    async createPlan(req: Request, res: Response) {
+        res.status(201).json(serialize(await createPlanUsecase(planRepository, req.body)));
+    },
+
+    async updatePlan(req: Request, res: Response) {
+        res.json(serialize(await updatePlanUsecase(planRepository, req.params.planId as string, req.body)));
     },
 };

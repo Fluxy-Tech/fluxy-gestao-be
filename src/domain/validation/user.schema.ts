@@ -15,6 +15,8 @@ export const updateProfileSchema = z.object({
 
 export const updateCompanySchema = z.object({
     businessCategory: z.enum(["STANDARD", "HAIRDRESSER", "LAB", "PETSHOP"]).optional(),
+    // Ramo de atuação (domain/business-segments.ts); quando enviado, define o businessCategory.
+    businessSegment: z.string().trim().min(1).optional(),
     companyName: z.string().nullable().optional(),
     cnpj: z.string().nullable().optional(),
     cpf: z.string().nullable().optional(),
@@ -27,6 +29,10 @@ export const updateCompanySchema = z.object({
     city: z.string().nullable().optional(),
     state: z.string().nullable().optional(),
     currentCash: z.number().min(0).optional(),
+});
+
+export const updatePreferencesSchema = z.object({
+    dashboardView: z.enum(["table", "calendar"]),
 });
 
 export const updateBrandSchema = z.object({

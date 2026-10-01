@@ -43,14 +43,24 @@ model User {
   banReason  String?
   banExpires DateTime?
 
-  // Plano único — mantido apenas para referência de billing, não gate mais acesso a funcionalidades.
-  plan String @default("mensal")
+  // Plano de assinatura (slug de Plan). Define o valor da fatura e os limites de clientes,
+  // serviços e OS por mês — ver application/usecases/plan/plan-limits.ts. Escolhido no
+  // cadastro, alterado pelo próprio usuário (com validação de downgrade) ou pelo admin.
+  plan    String @default("bronze")
+  planRef Plan   @relation(fields: [plan], references: [slug], onUpdate: Cascade)
 
   // company/profile fields (was `profiles` table)
   phone            String?
   avatarUrl        String?
   theme            String  @default("light")
   businessCategory BusinessCategory @default(STANDARD)
+  // Ramo de atuação escolhido na lista de segmentos (domain/business-segments.ts). O
+  // businessCategory acima é derivado dele e controla o comportamento do app (agenda,
+  // nome do paciente); o segmento é o rótulo que o usuário escolhe e vê.
+  businessSegment  String?
+  // Preferência de visualização do dashboard: "table" ou "calendar". Null = padrão pela
+  // categoria (agenda para quem usa horário, tabela para os demais).
+  dashboardView    String?
   companyName      String?
   cnpj             String?
   cpf              String?
@@ -111,6 +121,28 @@ model User {
   serviceInvoices ServiceInvoice[]
 
   @@map("user")
+}
+
+// Planos de assinatura da plataforma, gerenciados no painel admin. Limites null = sem
+// limite. O slug é a chave estável referenciada por User.plan (não editável no admin);
+// nome, preço, limites, descrição e ordem podem ser ajustados livremente.
+model Plan {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  name              String
+  price             Decimal  @db.Decimal(10, 2)
+  maxClients        Int?
+  maxServices       Int?
+  maxOrdersPerMonth Int?
+  description       String?
+  active            Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users User[]
+
+  @@map("plan")
 }
 
 model Session {

@@ -2,6 +2,8 @@ import type { CreateOrderInput, OrderRepository } from "../../../domain/reposito
 import type { ClientRepository } from "../../../domain/repository/client.repository";
 import type { AuditLogRepository } from "../../../domain/repository/audit-log.repository";
 import type { UserRepository } from "../../../domain/repository/user.repository";
+import type { PlanRepository } from "../../../domain/repository/plan.repository";
+import { assertPlanLimit } from "../plan/plan-limits";
 import { createOrderSchema } from "../../../domain/validation/order.schema";
 import { resolveDeliveryDate } from "../../../domain/order-scheduling";
 import { invalidateDashboardCache } from "./get-dashboard.usecase";
@@ -13,10 +15,14 @@ export async function createOrderUsecase(
     clientRepo: ClientRepository,
     userRepo: UserRepository,
     auditRepo: AuditLogRepository,
+    planRepo: PlanRepository,
     userId: string,
     input: CreateOrderInput,
 ) {
     const data = createOrderSchema.parse(input);
+    // OS geradas pelo job de recorrência não passam por aqui (gravam direto no repositório),
+    // então uma OS fixa continua se repetindo mesmo com o limite mensal atingido.
+    await assertPlanLimit(planRepo, userRepo, userId, "orders");
 
     const [client, user] = await Promise.all([
         clientRepo.findById(data.clientId, userId),

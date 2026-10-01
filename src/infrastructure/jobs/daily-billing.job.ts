@@ -3,6 +3,7 @@ import { invoiceRepository } from "../repositories/invoice.repository";
 import { userRepository } from "../repositories/user.repository";
 import { syncInvoiceStatusesUsecase } from "../../application/usecases/billing/sync-invoice-statuses.usecase";
 import { blockOverdueUsersUsecase } from "../../application/usecases/billing/block-overdue-users.usecase";
+import { planRepository } from "../repositories/plan.repository";
 import { generateMonthlyInvoicesUsecase } from "../../application/usecases/billing/generate-monthly-invoices.usecase";
 
 // Roda todo dia às 07h: primeiro sincroniza pagamentos pendentes com a Asaas (para
@@ -12,7 +13,7 @@ import { generateMonthlyInvoicesUsecase } from "../../application/usecases/billi
 export async function runDailyBilling(): Promise<void> {
     const { paid } = await syncInvoiceStatusesUsecase(invoiceRepository, userRepository);
     const { blocked } = await blockOverdueUsersUsecase(invoiceRepository, userRepository);
-    const { generated, failed } = await generateMonthlyInvoicesUsecase(userRepository, invoiceRepository);
+    const { generated, failed } = await generateMonthlyInvoicesUsecase(userRepository, invoiceRepository, planRepository);
 
     console.log(
         `[billing] ${new Date().toISOString()} — pagas: ${paid}, bloqueados: ${blocked}, faturas geradas: ${generated}, falhas: ${failed}`,

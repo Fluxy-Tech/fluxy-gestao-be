@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { serviceRepository } from "../../infrastructure/repositories/service.repository";
 import { auditLogRepository } from "../../infrastructure/repositories/audit-log.repository";
+import { userRepository } from "../../infrastructure/repositories/user.repository";
+import { planRepository } from "../../infrastructure/repositories/plan.repository";
 import { listActiveServicesUsecase, listServicesUsecase } from "../../application/usecases/service/list-services.usecase";
 import { createServiceUsecase } from "../../application/usecases/service/create-service.usecase";
 import { updateServiceUsecase } from "../../application/usecases/service/update-service.usecase";
@@ -17,7 +19,14 @@ export const serviceController = {
     },
 
     async create(req: Request, res: Response) {
-        const service = await createServiceUsecase(serviceRepository, auditLogRepository, req.userId, req.body);
+        const service = await createServiceUsecase(
+            serviceRepository,
+            auditLogRepository,
+            planRepository,
+            userRepository,
+            req.userId,
+            req.body,
+        );
         res.status(201).json(serialize(service));
     },
 
