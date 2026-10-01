@@ -59,10 +59,11 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
                 throw new Error("Uma ou mais OS selecionadas já estão vinculadas a outra nota em aberto.");
             }
 
-            const [{ noteSequence }] = await tx.$queryRaw<{ noteSequence: bigint }[]>`
-                UPDATE "client" SET "noteSequence" = "noteSequence" + 1
-                WHERE id = ${data.clientId} AND "userId" = ${userId}
-                RETURNING "noteSequence"
+            // Numeração única da empresa, independente do cliente (igual às OS).
+            const [{ invoiceSequence }] = await tx.$queryRaw<{ invoiceSequence: bigint }[]>`
+                UPDATE "user" SET "invoiceSequence" = "invoiceSequence" + 1
+                WHERE id = ${userId}
+                RETURNING "invoiceSequence"
             `;
 
             const totalAmount = orders.reduce((sum, o) => sum + Number(o.totalSale), 0);
@@ -71,7 +72,7 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
                 data: {
                     userId,
                     clientId: data.clientId,
-                    number: noteSequence,
+                    number: invoiceSequence,
                     totalAmount,
                 },
             });

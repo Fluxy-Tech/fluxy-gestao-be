@@ -76,6 +76,9 @@ model User {
   pdfColor         String  @default("#8c52ff")
   includeLogoInPdf Boolean @default(true)
   orderSequence    BigInt  @default(0)
+  // Sequência das notas fiscais de serviço — única por empresa (independente do
+  // cliente), começa em 1, mesmo padrão de orderSequence.
+  invoiceSequence  BigInt  @default(0)
 
   // Saldo de caixa informado pelo usuário; ajustado pelo job de conciliação (soma o
   // faturamento das OS finalizadas e subtrai a saída de caixa desde a última
@@ -220,11 +223,6 @@ model Client {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  // Sequência própria de numeração de nota fiscal de serviço, independente de outros
-  // clientes — cada cliente começa do 1 (ver ServiceInvoice e o padrão já usado em
-  // User.orderSequence para as OS).
-  noteSequence BigInt @default(0)
-
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders          Order[]
   serviceInvoices ServiceInvoice[]
@@ -363,8 +361,8 @@ model OrderItem {
 }
 
 // Nota fiscal de serviço: agrupa OS já existentes de um cliente sob um número
-// sequencial próprio do cliente (começa em 1, independente de outros clientes — ver
-// Client.noteSequence). ISSUED = emitida; SETTLED = "dar baixa" (as OS vinculadas viram
+// sequencial da empresa (começa em 1 e segue independente do cliente, como as OS — ver
+// User.invoiceSequence). ISSUED = emitida; SETTLED = "dar baixa" (as OS vinculadas viram
 // PAID); CANCELED = cancelada, nunca deletada — pode ser reaberta (volta a ISSUED). O
 // vínculo das OS não é desfeito ao cancelar; elas só podem entrar em outra nota
 // enquanto esta estiver CANCELED ou SETTLED.
@@ -394,7 +392,7 @@ model ServiceInvoice {
   client Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
   orders Order[]
 
-  @@unique([clientId, number])
+  @@unique([userId, number])
   @@index([userId])
   @@index([clientId])
   @@index([status])
