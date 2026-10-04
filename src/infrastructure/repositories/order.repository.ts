@@ -229,7 +229,8 @@ export const orderRepository: OrderRepository = {
             await tx.orderItem.createMany({
                 data: data.items.map((item) => ({
                     orderId: order.id,
-                    serviceId: item.serviceId,
+                    serviceId: item.serviceId ?? null,
+                    serviceName: item.serviceName ?? null,
                     userId,
                     costPrice: item.costPrice,
                     salePrice: item.salePrice,
@@ -251,7 +252,8 @@ export const orderRepository: OrderRepository = {
             await tx.orderItem.createMany({
                 data: data.items.map((item) => ({
                     orderId: id,
-                    serviceId: item.serviceId,
+                    serviceId: item.serviceId ?? null,
+                    serviceName: item.serviceName ?? null,
                     userId,
                     costPrice: item.costPrice,
                     salePrice: item.salePrice,

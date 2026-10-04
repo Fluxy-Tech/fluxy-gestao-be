@@ -42,6 +42,7 @@ async function generateOccurrence(template: Template, occurrenceDate: Date): Pro
             data: template.orderItems.map((item) => ({
                 orderId: order.id,
                 serviceId: item.serviceId,
+                serviceName: item.serviceName,
                 userId: template.userId,
                 costPrice: item.costPrice,
                 salePrice: item.salePrice,

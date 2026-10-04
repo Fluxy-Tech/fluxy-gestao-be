@@ -8,7 +8,8 @@ import type {
 } from "../../../generated/prisma/client";
 
 export interface CreateOrderItemInput {
-    serviceId: string;
+    serviceId?: string | null;
+    serviceName?: string | null;
     costPrice: number;
     salePrice: number;
     discount?: number;
@@ -43,7 +44,7 @@ export interface UpdateOrderItemsInput {
 }
 
 export type OrderWithClientName = Order & { client: { name: string } };
-export type OrderItemWithServiceName = OrderItem & { service: { name: string } };
+export type OrderItemWithServiceName = OrderItem & { service: { name: string } | null };
 export type OrderDetail = Order & {
     client: Client | null;
     items: OrderItemWithServiceName[];

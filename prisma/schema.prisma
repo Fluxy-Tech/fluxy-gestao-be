@@ -339,21 +339,25 @@ model Order {
   @@map("order")
 }
 
+// serviceId nulo = serviço extra (avulso), digitado direto na OS e fora do catálogo.
+// serviceName guarda o nome do serviço no momento da OS (catálogo ou extra).
+// discount/increase são valores em R$ sobre o total do item (não porcentagem).
 model OrderItem {
-  id         String   @id @default(cuid())
-  orderId    String
-  serviceId  String
-  userId     String
-  costPrice  Decimal  @db.Decimal(14, 2)
-  salePrice  Decimal  @db.Decimal(14, 2)
-  discount   Decimal  @default(0) @db.Decimal(6, 2)
-  increase   Decimal  @default(0) @db.Decimal(6, 2)
-  quantity   Decimal  @default(1) @db.Decimal(14, 3)
-  finalPrice Decimal  @db.Decimal(14, 2)
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  orderId     String
+  serviceId   String?
+  serviceName String?
+  userId      String
+  costPrice   Decimal  @db.Decimal(14, 2)
+  salePrice   Decimal  @db.Decimal(14, 2)
+  discount    Decimal  @default(0) @db.Decimal(14, 2)
+  increase    Decimal  @default(0) @db.Decimal(14, 2)
+  quantity    Decimal  @default(1) @db.Decimal(14, 3)
+  finalPrice  Decimal  @db.Decimal(14, 2)
+  createdAt   DateTime @default(now())
 
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([orderId])

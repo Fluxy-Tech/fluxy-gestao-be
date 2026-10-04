@@ -89,12 +89,15 @@ export async function getReportUsecase(
         .map(([name, value]) => ({ name, value }));
 
     // Top 5 serviços mais vendidos (por quantidade) no período.
-    const serviceStats = new Map<string, { serviceId: string; name: string; quantity: number; revenue: number }>();
+    // Serviços extras (sem serviceId) são agrupados pelo nome digitado.
+    const serviceStats = new Map<string, { serviceId: string | null; name: string; quantity: number; revenue: number }>();
     for (const it of items) {
-        const cur = serviceStats.get(it.serviceId) ?? { serviceId: it.serviceId, name: it.service.name, quantity: 0, revenue: 0 };
+        const name = it.service?.name ?? it.serviceName ?? "Serviço extra";
+        const key = it.serviceId ?? `extra:${name.toLowerCase()}`;
+        const cur = serviceStats.get(key) ?? { serviceId: it.serviceId, name, quantity: 0, revenue: 0 };
         cur.quantity += Number(it.quantity);
         cur.revenue += Number(it.finalPrice);
-        serviceStats.set(it.serviceId, cur);
+        serviceStats.set(key, cur);
     }
     const topServices = Array.from(serviceStats.values())
         .sort((a, b) => b.quantity - a.quantity)

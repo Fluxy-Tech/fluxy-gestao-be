@@ -1,14 +1,22 @@
 import { z } from "zod";
 
-export const createOrderItemSchema = z.object({
-    serviceId: z.string().min(1),
-    costPrice: z.number().min(0),
-    salePrice: z.number().min(0),
-    discount: z.number().min(0).optional(),
-    increase: z.number().min(0).optional(),
-    quantity: z.number().min(1).optional(),
-    finalPrice: z.number().min(0),
-});
+// serviceId ausente = serviço extra (fora do catálogo); nesse caso o nome é obrigatório.
+// discount/increase são valores em R$ sobre o total do item.
+export const createOrderItemSchema = z
+    .object({
+        serviceId: z.string().min(1).nullable().optional(),
+        serviceName: z.string().trim().max(200).nullable().optional(),
+        costPrice: z.number().min(0),
+        salePrice: z.number().min(0),
+        discount: z.number().min(0).optional(),
+        increase: z.number().min(0).optional(),
+        quantity: z.number().min(1).optional(),
+        finalPrice: z.number().min(0),
+    })
+    .refine((item) => !!item.serviceId || !!item.serviceName, {
+        message: "Informe o nome do serviço extra.",
+        path: ["serviceName"],
+    });
 
 export const createOrderSchema = z
     .object({
