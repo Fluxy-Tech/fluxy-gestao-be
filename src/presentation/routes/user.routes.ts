@@ -9,6 +9,10 @@ userRoutes.get("/me", asyncHandler(userController.me));
 // Sem requireActiveBilling (ver index.ts): quem está com a cobrança bloqueada também
 // precisa conseguir levar os próprios dados para o app.
 userRoutes.get("/me/export", asyncHandler(userController.exportData));
+// App mobile: envia a base que estava só no aparelho (substitui a da conta). Sem
+// requireActiveBilling, como o export — os dados são do usuário mesmo com a conta bloqueada.
+userRoutes.post("/me/import-device", asyncHandler(userController.importDevice));
+userRoutes.post("/me/purge-data", asyncHandler(userController.purgeData));
 userRoutes.patch("/me/profile", asyncHandler(userController.updateProfile));
 userRoutes.patch("/me/company", asyncHandler(userController.updateCompany));
 userRoutes.patch("/me/brand", asyncHandler(userController.updateBrand));

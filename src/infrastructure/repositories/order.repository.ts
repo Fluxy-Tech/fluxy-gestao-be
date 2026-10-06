@@ -209,6 +209,7 @@ export const orderRepository: OrderRepository = {
 
             const order = await tx.order.create({
                 data: {
+                    ...(data.id ? { id: data.id } : {}),
                     userId,
                     clientId: data.clientId,
                     numberOrder: orderSequence,

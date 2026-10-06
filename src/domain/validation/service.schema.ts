@@ -1,6 +1,8 @@
+import { clientIdSchema } from "./client-id";
 import { z } from "zod";
 
 export const createServiceSchema = z.object({
+    id: clientIdSchema,
     name: z.string().trim().min(1, "Nome é obrigatório."),
     description: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
@@ -10,4 +12,4 @@ export const createServiceSchema = z.object({
     showInCatalog: z.boolean().optional(),
 });
 
-export const updateServiceSchema = createServiceSchema.partial();
+export const updateServiceSchema = createServiceSchema.omit({ id: true }).partial();

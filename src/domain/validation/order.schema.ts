@@ -1,3 +1,4 @@
+import { clientIdSchema } from "./client-id";
 import { z } from "zod";
 
 // serviceId ausente = serviço extra (fora do catálogo); nesse caso o nome é obrigatório.
@@ -20,6 +21,7 @@ export const createOrderItemSchema = z
 
 export const createOrderSchema = z
     .object({
+        id: clientIdSchema,
         clientId: z.string().min(1, "Selecione um cliente."),
         patientName: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),

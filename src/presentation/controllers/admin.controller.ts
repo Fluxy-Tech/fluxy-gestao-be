@@ -5,6 +5,7 @@ import { getAdminMetricsUsecase } from "../../application/usecases/admin/get-adm
 import { getAuditLogUsecase } from "../../application/usecases/admin/get-audit-log.usecase";
 import { listOverdueUsersUsecase } from "../../application/usecases/admin/list-overdue-users.usecase";
 import { setBillingExemptUsecase } from "../../application/usecases/admin/set-billing-exempt.usecase";
+import { deleteUserUsecase } from "../../application/usecases/admin/delete-user.usecase";
 import { invoiceRepository } from "../../infrastructure/repositories/invoice.repository";
 import { serialize } from "../serialize";
 import { planRepository } from "../../infrastructure/repositories/plan.repository";
@@ -34,6 +35,18 @@ export const adminController = {
     async setBillingExempt(req: Request, res: Response) {
         await setBillingExemptUsecase(userRepository, auditLogRepository, invoiceRepository, req.params.userId as string, req.body);
         res.json({ ok: true });
+    },
+
+    async deleteUser(req: Request, res: Response) {
+        const deleted = await deleteUserUsecase(
+            userRepository,
+            auditLogRepository,
+            invoiceRepository,
+            req.userId,
+            req.params.userId as string,
+            req.body,
+        );
+        res.json({ ok: true, deleted });
     },
 
     async setUserPlan(req: Request, res: Response) {

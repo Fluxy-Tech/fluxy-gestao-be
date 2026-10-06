@@ -28,6 +28,7 @@ export const debtRepository: DebtRepository = {
     create(userId, data: CreateDebtInput) {
         return prisma.debt.create({
             data: {
+                ...(data.id ? { id: data.id } : {}),
                 userId,
                 description: data.description,
                 amount: data.amount,

@@ -54,4 +54,7 @@ export interface UserRepository {
     setBillingExempt(id: string, exempt: boolean): Promise<void>;
     setPlan(id: string, plan: string): Promise<User>;
     setDashboardView(id: string, view: "table" | "calendar"): Promise<User>;
+    // Exclusão definitiva (painel admin): apaga o usuário e todos os dados dele numa
+    // transação só. Devolve quantas linhas foram removidas de cada tabela.
+    deleteWithAllData(id: string): Promise<Record<string, number>>;
 }

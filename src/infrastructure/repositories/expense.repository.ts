@@ -28,6 +28,7 @@ export const expenseRepository: ExpenseRepository = {
     create(userId, data: CreateExpenseInput) {
         return prisma.expense.create({
             data: {
+                ...(data.id ? { id: data.id } : {}),
                 userId,
                 description: data.description,
                 amount: data.amount,

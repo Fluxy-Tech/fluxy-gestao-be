@@ -12,6 +12,11 @@ export const auditLogFilterSchema = z.object({
     userId: z.string().optional(),
 });
 
+// O admin redigita o e-mail do usuário para confirmar a exclusão definitiva.
+export const deleteUserSchema = z.object({
+    confirmEmail: z.string().min(1, "Confirme o e-mail do usuário."),
+});
+
 export const setBillingExemptSchema = z.object({
     exempt: z.boolean(),
 });

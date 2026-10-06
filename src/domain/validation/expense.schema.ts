@@ -1,7 +1,9 @@
+import { clientIdSchema } from "./client-id";
 import { z } from "zod";
 
 export const createExpenseSchema = z
     .object({
+        id: clientIdSchema,
         description: z.string().trim().min(1, "Descrição é obrigatória."),
         amount: z.number().positive("Valor deve ser maior que zero."),
         category: z.string().nullable().optional(),

@@ -1,3 +1,4 @@
+import { clientIdSchema } from "./client-id";
 import { z } from "zod";
 import { normalizePhoneForStorage } from "./normalize-phone";
 
@@ -8,6 +9,7 @@ const phoneSchema = z
     .transform((v) => (v == null ? v ?? null : normalizePhoneForStorage(v)));
 
 export const createClientSchema = z.object({
+    id: clientIdSchema,
     name: z.string().trim().min(1, "Nome é obrigatório."),
     email: z.string().trim().email().nullable().optional(),
     phone: phoneSchema,
@@ -25,4 +27,4 @@ export const createClientSchema = z.object({
     increase: z.number().min(0).optional(),
 });
 
-export const updateClientSchema = createClientSchema.partial();
+export const updateClientSchema = createClientSchema.omit({ id: true }).partial();

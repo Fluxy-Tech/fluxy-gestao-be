@@ -41,3 +41,15 @@ export const updateBrandSchema = z.object({
     includeLogoInPdf: z.boolean().optional(),
     logoUrl: z.string().url().optional(),
 });
+
+// "Apagar dados" em Configurações > Empresa: o usuário marca o que quer apagar e digita
+// APAGAR para confirmar. Clientes arrastam as OS junto (toda OS pertence a um cliente).
+export const purgeUserDataSchema = z
+    .object({
+        orders: z.boolean().default(false),
+        services: z.boolean().default(false),
+        clients: z.boolean().default(false),
+        confirm: z.string(),
+    })
+    .refine((v) => v.orders || v.services || v.clients, { message: "Selecione o que deseja apagar." })
+    .refine((v) => v.confirm.trim().toUpperCase() === "APAGAR", { message: "Digite APAGAR para confirmar." });

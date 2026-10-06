@@ -1,6 +1,7 @@
 import type { Order, ServiceInvoice, ServiceInvoiceStatus } from "../../../generated/prisma/client";
 
 export interface CreateServiceInvoiceInput {
+    id?: string;
     clientId: string;
     orderIds: string[];
 }

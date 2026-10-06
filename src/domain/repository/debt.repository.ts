@@ -1,6 +1,7 @@
 import type { Debt, PaymentStatus } from "../../../generated/prisma/client";
 
 export interface CreateDebtInput {
+    id?: string;
     description: string;
     amount: number;
     category?: string | null;

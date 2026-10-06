@@ -14,6 +14,7 @@ export async function createDebtUsecase(
     const { paymentStatus, amountPaid } = resolveDebtPayment(data.amount, data);
 
     const debt = await repo.create(userId, {
+        id: data.id,
         description: data.description,
         amount: data.amount,
         category: data.category,

@@ -33,6 +33,9 @@ app.use(
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
+// A importação da base do app mobile manda todos os dados de uma vez — limite maior só
+// nessa rota (o express.json global abaixo pula corpos já lidos aqui).
+app.use("/api/users/me/import-device", express.json({ limit: "50mb" }));
 app.use(express.json());
 
 app.get("/", (_, res) => {

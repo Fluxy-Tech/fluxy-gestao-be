@@ -1,6 +1,7 @@
 import type { Client } from "../../../generated/prisma/client";
 
 export interface CreateClientInput {
+    id?: string;
     name: string;
     email?: string | null;
     phone?: string | null;

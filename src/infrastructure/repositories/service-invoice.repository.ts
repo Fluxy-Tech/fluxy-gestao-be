@@ -70,6 +70,7 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
 
             const invoice = await tx.serviceInvoice.create({
                 data: {
+                    ...(data.id ? { id: data.id } : {}),
                     userId,
                     clientId: data.clientId,
                     number: invoiceSequence,

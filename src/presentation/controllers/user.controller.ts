@@ -7,6 +7,8 @@ import { updateBrandUsecase } from "../../domain/user/update-brand.usecase";
 import { uploadToS3 } from "../../infrastructure/storage/s3-storage";
 import { serialize } from "../serialize";
 import { exportUserDataUsecase } from "../../application/usecases/user/export-user-data.usecase";
+import { importDeviceDataUsecase } from "../../application/usecases/user/import-device-data.usecase";
+import { purgeUserDataUsecase } from "../../application/usecases/user/purge-user-data.usecase";
 import { updatePreferencesUsecase } from "../../domain/user/update-preferences.usecase";
 import { auditLogRepository } from "../../infrastructure/repositories/audit-log.repository";
 import { planRepository } from "../../infrastructure/repositories/plan.repository";
@@ -16,6 +18,16 @@ export const userController = {
     async exportData(req: Request, res: Response) {
         const data = await exportUserDataUsecase(req.userId);
         res.json(serialize(data));
+    },
+
+    async importDevice(req: Request, res: Response) {
+        const counts = await importDeviceDataUsecase(auditLogRepository, req.userId, req.body);
+        res.json({ ok: true, counts });
+    },
+
+    async purgeData(req: Request, res: Response) {
+        const deleted = await purgeUserDataUsecase(auditLogRepository, req.userId, req.body);
+        res.json({ ok: true, deleted });
     },
 
     async me(req: Request, res: Response) {

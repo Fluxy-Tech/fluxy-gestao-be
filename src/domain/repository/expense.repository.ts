@@ -1,6 +1,7 @@
 import type { Expense, ExpenseStatus, RecurrenceFrequency } from "../../../generated/prisma/client";
 
 export interface CreateExpenseInput {
+    id?: string;
     description: string;
     amount: number;
     category?: string | null;

@@ -1,6 +1,7 @@
 import type { Service } from "../../../generated/prisma/client";
 
 export interface CreateServiceInput {
+    id?: string;
     name: string;
     description?: string | null;
     category?: string | null;

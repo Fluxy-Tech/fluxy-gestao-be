@@ -19,6 +19,7 @@ export interface CreateOrderItemInput {
 }
 
 export interface CreateOrderInput {
+    id?: string;
     clientId: string;
     patientName?: string | null;
     notes?: string | null;
