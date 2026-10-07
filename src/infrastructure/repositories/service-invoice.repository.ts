@@ -1,4 +1,5 @@
 import { prisma } from "../database/prisma";
+import type { Prisma } from "../../../generated/prisma/client";
 import type {
     CreateServiceInvoiceInput,
     ListServiceInvoiceFilters,
@@ -9,6 +10,30 @@ const includeClientAndOrders = {
     client: { select: { name: true } },
     orders: { select: { id: true, numberOrder: true } },
 } as const;
+
+// Distribui o valor pago da nota entre as OS vinculadas, da mais antiga para a mais nova:
+// cada OS recebe até o seu total antes de passar para a próxima. Assim o pagamento parcial
+// da nota chega ao caixa (que soma o amountPaid das OS — ver reconcileUserCash).
+async function distributeInvoicePayment(tx: Prisma.TransactionClient, invoiceId: string, amountPaid: number) {
+    const orders = await tx.order.findMany({
+        where: { serviceInvoiceId: invoiceId },
+        select: { id: true, totalSale: true },
+        orderBy: { numberOrder: "asc" },
+    });
+
+    const now = new Date();
+    let remaining = amountPaid;
+    for (const order of orders) {
+        const total = Number(order.totalSale);
+        const paid = Math.min(remaining, total);
+        remaining = Math.max(0, remaining - paid);
+        const paymentStatus = paid <= 0 ? "PENDING" : paid >= total ? "PAID" : "PARTIAL";
+        await tx.order.update({
+            where: { id: order.id },
+            data: { paymentStatus, amountPaid: paid, lastPaymentAt: now },
+        });
+    }
+}
 
 export const serviceInvoiceRepository: ServiceInvoiceRepository = {
     findManyByUser(userId, filters: ListServiceInvoiceFilters) {
@@ -163,6 +188,15 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
             });
             const totalAmount = linkedOrders.reduce((sum, o) => sum + Number(o.totalSale), 0);
 
+            // Com pagamento parcial, o valor já recebido é redistribuído entre as OS que
+            // ficaram na nota — e precisa continuar menor que o novo total.
+            if (invoice.paymentStatus === "PARTIAL") {
+                if (Number(invoice.amountPaid) >= totalAmount) {
+                    throw new Error("O valor já pago da nota é maior ou igual ao novo total. Ajuste o pagamento antes.");
+                }
+                await distributeInvoicePayment(tx, id, Number(invoice.amountPaid));
+            }
+
             return tx.serviceInvoice.update({
                 where: { id },
                 data: { totalAmount },
@@ -171,26 +205,30 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
         });
     },
 
-    async settle(id, userId) {
+    settle(id, userId) {
+        return serviceInvoiceRepository.updatePayment(id, userId, { paymentStatus: "PAID", amountPaid: 0 });
+    },
+
+    // PAID quita a nota inteira (vira SETTLED, como "dar baixa"); PARTIAL/PENDING mantêm a
+    // nota em aberto (ISSUED) com o valor já recebido.
+    async updatePayment(id, userId, data) {
         return prisma.$transaction(async (tx) => {
+            const current = await tx.serviceInvoice.findFirstOrThrow({ where: { id, userId } });
+            const amountPaid = data.paymentStatus === "PAID" ? Number(current.totalAmount) : data.amountPaid;
+
             const invoice = await tx.serviceInvoice.update({
                 where: { id, userId },
-                data: { status: "SETTLED", settledAt: new Date() },
+                data: {
+                    paymentStatus: data.paymentStatus,
+                    amountPaid,
+                    ...(data.paymentStatus === "PAID" ? { status: "SETTLED", settledAt: new Date() } : {}),
+                },
+                include: includeClientAndOrders,
             });
 
-            const orders = await tx.order.findMany({
-                where: { serviceInvoiceId: id },
-                select: { id: true, totalSale: true },
-            });
-
-            const now = new Date();
-            for (const order of orders) {
-                await tx.order.update({
-                    where: { id: order.id },
-                    data: { paymentStatus: "PAID", amountPaid: order.totalSale, lastPaymentAt: now },
-                });
-            }
-
+            // Quitada: toda OS vinculada fica paga pelo próprio total, mesmo que algum total
+            // tenha mudado depois da emissão.
+            await distributeInvoicePayment(tx, id, data.paymentStatus === "PAID" ? Infinity : amountPaid);
             return invoice;
         });
     },

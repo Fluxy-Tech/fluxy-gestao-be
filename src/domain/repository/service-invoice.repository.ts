@@ -6,6 +6,11 @@ export interface CreateServiceInvoiceInput {
     orderIds: string[];
 }
 
+export interface UpdateServiceInvoicePaymentInput {
+    paymentStatus: "PENDING" | "PARTIAL" | "PAID";
+    amountPaid: number;
+}
+
 export interface ListServiceInvoiceFilters {
     clientId?: string;
     number?: bigint;
@@ -25,6 +30,7 @@ export interface ServiceInvoiceRepository {
     cancel(id: string, userId: string, cancelReason?: string | null): Promise<ServiceInvoice>;
     reopen(id: string, userId: string): Promise<ServiceInvoice>;
     settle(id: string, userId: string): Promise<ServiceInvoice>;
+    updatePayment(id: string, userId: string, data: UpdateServiceInvoicePaymentInput): Promise<ServiceInvoice>;
     updateOrders(id: string, userId: string, orderIds: string[]): Promise<ServiceInvoice>;
 }
 

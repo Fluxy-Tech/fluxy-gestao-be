@@ -15,6 +15,11 @@ export const updateServiceInvoiceOrdersSchema = z.object({
     orderIds: z.array(z.string().min(1)).min(1, "A nota precisa ter ao menos uma OS vinculada."),
 });
 
+export const updateServiceInvoicePaymentSchema = z.object({
+    paymentStatus: z.enum(["PENDING", "PARTIAL", "PAID"]),
+    amountPaid: z.number().min(0).optional(),
+});
+
 export const listServiceInvoicesQuerySchema = z.object({
     clientId: z.string().min(1).optional(),
     number: z.coerce.number().int().positive().optional(),

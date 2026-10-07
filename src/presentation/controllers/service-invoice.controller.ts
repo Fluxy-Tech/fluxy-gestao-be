@@ -8,6 +8,7 @@ import { cancelServiceInvoiceUsecase } from "../../application/usecases/service-
 import { reopenServiceInvoiceUsecase } from "../../application/usecases/service-invoice/reopen-service-invoice.usecase";
 import { updateServiceInvoiceOrdersUsecase } from "../../application/usecases/service-invoice/update-service-invoice-orders.usecase";
 import { settleServiceInvoiceUsecase } from "../../application/usecases/service-invoice/settle-service-invoice.usecase";
+import { updateServiceInvoicePaymentUsecase } from "../../application/usecases/service-invoice/update-service-invoice-payment.usecase";
 import { serialize } from "../serialize";
 
 export const serviceInvoiceController = {
@@ -44,6 +45,17 @@ export const serviceInvoiceController = {
             auditLogRepository,
             req.userId,
             req.params.id as string,
+        );
+        res.json(serialize(invoice));
+    },
+
+    async updatePayment(req: Request, res: Response) {
+        const invoice = await updateServiceInvoicePaymentUsecase(
+            serviceInvoiceRepository,
+            auditLogRepository,
+            req.userId,
+            req.params.id as string,
+            req.body,
         );
         res.json(serialize(invoice));
     },

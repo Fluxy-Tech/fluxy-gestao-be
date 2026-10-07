@@ -52,7 +52,7 @@ model User {
   // company/profile fields (was `profiles` table)
   phone            String?
   avatarUrl        String?
-  theme            String  @default("light")
+  theme            String           @default("light")
   businessCategory BusinessCategory @default(STANDARD)
   // Ramo de atuação escolhido na lista de segmentos (domain/business-segments.ts). O
   // businessCategory acima é derivado dele e controla o comportamento do app (agenda,
@@ -72,13 +72,13 @@ model User {
   city             String?
   state            String?
   logoUrl          String?
-  primaryColor     String  @default("#8c52ff")
-  pdfColor         String  @default("#8c52ff")
-  includeLogoInPdf Boolean @default(true)
-  orderSequence    BigInt  @default(0)
+  primaryColor     String           @default("#8c52ff")
+  pdfColor         String           @default("#8c52ff")
+  includeLogoInPdf Boolean          @default(true)
+  orderSequence    BigInt           @default(0)
   // Sequência das notas fiscais de serviço — única por empresa (independente do
   // cliente), começa em 1, mesmo padrão de orderSequence.
-  invoiceSequence  BigInt  @default(0)
+  invoiceSequence  BigInt           @default(0)
 
   // Saldo de caixa informado pelo usuário; ajustado pelo job de conciliação (soma o
   // faturamento das OS finalizadas e subtrai a saída de caixa desde a última
@@ -112,15 +112,15 @@ model User {
   sessions Session[]
   accounts Account[]
 
-  clients    Client[]
-  services   Service[]
-  orders     Order[]
-  orderItems OrderItem[]
-  auditLogs     AuditLog[]
-  expenses      Expense[]
-  debts         Debt[]
-  invoices      Invoice[]
-  cashMovements CashMovement[]
+  clients         Client[]
+  services        Service[]
+  orders          Order[]
+  orderItems      OrderItem[]
+  auditLogs       AuditLog[]
+  expenses        Expense[]
+  debts           Debt[]
+  invoices        Invoice[]
+  cashMovements   CashMovement[]
   serviceInvoices ServiceInvoice[]
 
   @@map("user")
@@ -232,18 +232,18 @@ model Client {
 }
 
 model Service {
-  id          String    @id @default(cuid())
-  userId      String
-  name        String
-  description String?
-  category    String?
-  costPrice   Decimal   @default(0) @db.Decimal(14, 2)
-  salePrice   Decimal   @default(0) @db.Decimal(14, 2)
-  active      Boolean   @default(true)
-  showInCatalog Boolean @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  category      String?
+  costPrice     Decimal   @default(0) @db.Decimal(14, 2)
+  salePrice     Decimal   @default(0) @db.Decimal(14, 2)
+  active        Boolean   @default(true)
+  showInCatalog Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
@@ -266,44 +266,44 @@ enum PaymentStatus {
 }
 
 model Order {
-  id             String        @id @default(cuid())
-  userId         String
-  clientId       String
-  numberOrder    BigInt
+  id                String        @id @default(cuid())
+  userId            String
+  clientId          String
+  numberOrder       BigInt
   // Só usado quando o usuário está na categoria LAB (ver BusinessCategory) — nome do
   // paciente ao qual o exame/serviço se refere, distinto do cliente (que é quem paga/
   // solicita). Opcional e não exibido/coletado nas demais categorias.
-  patientName    String?
-  statusOrder    OrderStatus   @default(PENDING)
-  paymentStatus  PaymentStatus @default(PENDING)
-  paymentMethod  String?
-  paymentDueDate DateTime?
-  amountPaid     Decimal       @default(0) @db.Decimal(14, 2)
+  patientName       String?
+  statusOrder       OrderStatus   @default(PENDING)
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentMethod     String?
+  paymentDueDate    DateTime?
+  amountPaid        Decimal       @default(0) @db.Decimal(14, 2)
   // Quando o pagamento (total ou parcial) foi de fato lançado — distinto de completedAt
   // (quando a OS foi marcada como concluída). Uma OS pode ser concluída num dia e só
   // receber o pagamento (ou um pagamento parcial adicional) dias depois; faturamento e
   // conciliação de caixa usam esta data, não completedAt, para saber em que período o
   // dinheiro efetivamente entrou (ver update-payment-status.usecase.ts).
-  lastPaymentAt  DateTime?
+  lastPaymentAt     DateTime?
   // Quanto do valor em caixa desta OS (ver cashRevenue em domain/order-cash.ts) já foi
   // somado ao currentCash do usuário pela conciliação de caixa. Substitui uma janela de
   // tempo (que "perderia" para sempre um pagamento lançado com atraso, ver
   // daily-cash-reconciliation.job.ts): a cada rodada só soma-se a diferença entre o valor
   // atual e o que já foi contado, então o botão "Atualizar Caixa atual" pode ser clicado
   // quantas vezes quiser, sem qualquer limite de uma vez por dia.
-  cashCountedAmount Decimal    @default(0) @db.Decimal(14, 2)
-  entryDate      DateTime      @default(now())
-  deliveryDate   DateTime?
-  completedAt    DateTime?
-  canceledAt     DateTime?
-  cancelReason   String?
-  notes          String?
-  totalCost      Decimal       @default(0) @db.Decimal(14, 2)
-  totalSale      Decimal       @default(0) @db.Decimal(14, 2)
-  createdBy      String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
+  cashCountedAmount Decimal       @default(0) @db.Decimal(14, 2)
+  entryDate         DateTime      @default(now())
+  deliveryDate      DateTime?
+  completedAt       DateTime?
+  canceledAt        DateTime?
+  cancelReason      String?
+  notes             String?
+  totalCost         Decimal       @default(0) @db.Decimal(14, 2)
+  totalSale         Decimal       @default(0) @db.Decimal(14, 2)
+  createdBy         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
 
   // "OS fixa": só a OS original (o "template") carrega recurWeekly/recurMonthly — as
   // ocorrências geradas automaticamente pelo job (ver recurring-orders.job.ts) nascem com
@@ -321,12 +321,12 @@ model Order {
   // service-invoice.repository.ts), e nesse caso o campo é reatribuído para a nova nota.
   serviceInvoiceId String?
 
-  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client           Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  orderItems       OrderItem[]
-  recurringParent  Order?      @relation("OrderRecurrence", fields: [recurringParentId], references: [id], onDelete: SetNull)
-  recurringChildren Order[]    @relation("OrderRecurrence")
-  serviceInvoice   ServiceInvoice? @relation(fields: [serviceInvoiceId], references: [id], onDelete: SetNull)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  orderItems        OrderItem[]
+  recurringParent   Order?          @relation("OrderRecurrence", fields: [recurringParentId], references: [id], onDelete: SetNull)
+  recurringChildren Order[]         @relation("OrderRecurrence")
+  serviceInvoice    ServiceInvoice? @relation(fields: [serviceInvoiceId], references: [id], onDelete: SetNull)
 
   @@unique([userId, numberOrder])
   @@index([userId])
@@ -358,7 +358,7 @@ model OrderItem {
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   service Service? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@map("order_item")
@@ -366,8 +366,8 @@ model OrderItem {
 
 // Nota fiscal de serviço: agrupa OS já existentes de um cliente sob um número
 // sequencial da empresa (começa em 1 e segue independente do cliente, como as OS — ver
-// User.invoiceSequence). ISSUED = emitida; SETTLED = "dar baixa" (as OS vinculadas viram
-// PAID); CANCELED = cancelada, nunca deletada — pode ser reaberta (volta a ISSUED). O
+// User.invoiceSequence). ISSUED = emitida; SETTLED = "dar baixa"/pagamento completo (as OS
+// vinculadas viram PAID); CANCELED = cancelada, nunca deletada — pode ser reaberta (volta a ISSUED). O
 // vínculo das OS não é desfeito ao cancelar; elas só podem entrar em outra nota
 // enquanto esta estiver CANCELED ou SETTLED.
 enum ServiceInvoiceStatus {
@@ -377,20 +377,26 @@ enum ServiceInvoiceStatus {
 }
 
 model ServiceInvoice {
-  id           String               @id @default(cuid())
-  userId       String
-  clientId     String
-  number       BigInt
-  issueDate    DateTime             @default(now())
+  id            String               @id @default(cuid())
+  userId        String
+  clientId      String
+  number        BigInt
+  issueDate     DateTime             @default(now())
   // Soma do totalSale das OS vinculadas no momento da criação — não recalculado depois,
   // é o valor "impresso" na nota.
-  totalAmount  Decimal              @default(0) @db.Decimal(14, 2)
-  status       ServiceInvoiceStatus @default(ISSUED)
-  settledAt    DateTime?
-  canceledAt   DateTime?
-  cancelReason String?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  totalAmount   Decimal              @default(0) @db.Decimal(14, 2)
+  status        ServiceInvoiceStatus @default(ISSUED)
+  // Pagamento da nota: PENDING (nada pago), PARTIAL (parte paga — a nota continua
+  // ISSUED/em aberto) ou PAID (pago integralmente — a nota vira SETTLED). O valor pago é
+  // distribuído entre as OS vinculadas (ver distributeInvoicePayment no repositório), para
+  // o caixa refletir o recebimento.
+  paymentStatus PaymentStatus        @default(PENDING)
+  amountPaid    Decimal              @default(0) @db.Decimal(14, 2)
+  settledAt     DateTime?
+  canceledAt    DateTime?
+  cancelReason  String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   client Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -510,17 +516,17 @@ enum InvoiceStatus {
 }
 
 model Invoice {
-  id               String        @id @default(cuid())
-  userId           String
-  referenceMonth   String
-  amount           Decimal       @db.Decimal(14, 2)
-  status           InvoiceStatus @default(PENDING)
-  dueDate          DateTime
-  paidAt           DateTime?
-  asaasPaymentId   String?       @unique
-  asaasInvoiceUrl  String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  userId          String
+  referenceMonth  String
+  amount          Decimal       @db.Decimal(14, 2)
+  status          InvoiceStatus @default(PENDING)
+  dueDate         DateTime
+  paidAt          DateTime?
+  asaasPaymentId  String?       @unique
+  asaasInvoiceUrl String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

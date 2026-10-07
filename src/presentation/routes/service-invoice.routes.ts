@@ -10,4 +10,5 @@ serviceInvoiceRoutes.post("/", idempotentCreate("serviceInvoice"), asyncHandler(
 serviceInvoiceRoutes.post("/:id/cancel", asyncHandler(serviceInvoiceController.cancel));
 serviceInvoiceRoutes.post("/:id/reopen", asyncHandler(serviceInvoiceController.reopen));
 serviceInvoiceRoutes.post("/:id/settle", asyncHandler(serviceInvoiceController.settle));
+serviceInvoiceRoutes.patch("/:id/payment-status", asyncHandler(serviceInvoiceController.updatePayment));
 serviceInvoiceRoutes.patch("/:id/orders", asyncHandler(serviceInvoiceController.updateOrders));
