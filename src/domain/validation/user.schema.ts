@@ -53,3 +53,8 @@ export const purgeUserDataSchema = z
     })
     .refine((v) => v.orders || v.services || v.clients, { message: "Selecione o que deseja apagar." })
     .refine((v) => v.confirm.trim().toUpperCase() === "APAGAR", { message: "Digite APAGAR para confirmar." });
+
+// Exclusão da própria conta: o usuário redigita o e-mail da conta para confirmar.
+export const deleteOwnAccountSchema = z.object({
+    confirmEmail: z.string().min(1, "Digite o e-mail da sua conta para confirmar."),
+});

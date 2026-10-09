@@ -112,16 +112,19 @@ model User {
   sessions Session[]
   accounts Account[]
 
-  clients         Client[]
-  services        Service[]
-  orders          Order[]
-  orderItems      OrderItem[]
-  auditLogs       AuditLog[]
-  expenses        Expense[]
-  debts           Debt[]
-  invoices        Invoice[]
-  cashMovements   CashMovement[]
-  serviceInvoices ServiceInvoice[]
+  clients           Client[]
+  services          Service[]
+  orders            Order[]
+  orderItems        OrderItem[]
+  auditLogs         AuditLog[]
+  expenses          Expense[]
+  debts             Debt[]
+  invoices          Invoice[]
+  cashMovements     CashMovement[]
+  serviceInvoices   ServiceInvoice[]
+  announcementReads AnnouncementRead[]
+  tickets           Ticket[]
+  ticketMessages    TicketMessage[]
 
   @@map("user")
 }
@@ -564,4 +567,138 @@ model AuditLog {
   @@index([createdAt])
   @@index([type])
   @@map("audit_log")
+}
+
+// ===================== Comunidade: anúncios =====================
+
+// Anúncio publicado pelo admin para todos os usuários. Aparece no sino do cabeçalho até o
+// usuário ver (AnnouncementRead) e fica no histórico da tela Comunidade.
+enum AnnouncementKind {
+  INFO
+  NEWS
+  WARNING
+  MAINTENANCE
+}
+
+model Announcement {
+  id          String           @id @default(cuid())
+  title       String
+  body        String
+  kind        AnnouncementKind @default(INFO)
+  published   Boolean          @default(true)
+  // Data de publicação: entra no sino de quem tinha conta nessa data (contas criadas
+  // depois veem o anúncio só no histórico da Comunidade).
+  publishedAt DateTime         @default(now())
+  createdById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  reads AnnouncementRead[]
+
+  @@index([published, publishedAt])
+  @@map("announcement")
+}
+
+model AnnouncementRead {
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@index([userId])
+  @@map("announcement_read")
+}
+
+// ===================== Suporte: tickets =====================
+
+// S1 = crítico (sistema parado / perda de dados), S2 = alto (função importante com
+// problema, há alternativa), S3 = baixo (dúvida, ajuste, sugestão).
+enum TicketSeverity {
+  S1
+  S2
+  S3
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketAuthorRole {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+model Ticket {
+  id            String           @id @default(cuid())
+  number        Int              @unique @default(autoincrement())
+  userId        String
+  subject       String
+  // Tela do sistema onde o problema acontece (lista fixa no front, texto livre aqui).
+  screen        String
+  severity      TicketSeverity
+  status        TicketStatus     @default(OPEN)
+  description   String
+  // Última mensagem e quem a escreveu — para marcar "resposta nova" para cada lado.
+  lastMessageAt DateTime         @default(now())
+  lastMessageBy TicketAuthorRole @default(USER)
+  userReadAt    DateTime?
+  adminReadAt   DateTime?
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    TicketMessage[]
+  attachments TicketAttachment[]
+
+  @@index([userId])
+  @@index([status, severity])
+  @@index([lastMessageAt])
+  @@map("ticket")
+}
+
+// Histórico do atendimento: mensagens do usuário e do suporte e registros automáticos
+// (SYSTEM) de mudança de status/severidade.
+model TicketMessage {
+  id         String           @id @default(cuid())
+  ticketId   String
+  authorId   String?
+  authorRole TicketAuthorRole
+  body       String
+  createdAt  DateTime         @default(now())
+
+  ticket      Ticket             @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User?              @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  attachments TicketAttachment[]
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_message")
+}
+
+// Arquivo anexado ao ticket — guardado no S3 SEM acesso público (key privada); o
+// download passa por GET /api/support/attachments/:id, que confere o dono/admin.
+model TicketAttachment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  messageId  String?
+  fileName   String
+  mimeType   String
+  size       Int
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  ticket  Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message TicketMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@map("ticket_attachment")
 }

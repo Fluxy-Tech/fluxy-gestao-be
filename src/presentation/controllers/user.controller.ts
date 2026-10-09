@@ -13,6 +13,8 @@ import { updatePreferencesUsecase } from "../../domain/user/update-preferences.u
 import { auditLogRepository } from "../../infrastructure/repositories/audit-log.repository";
 import { planRepository } from "../../infrastructure/repositories/plan.repository";
 import { changeMyPlanUsecase, getMyPlanUsecase } from "../../application/usecases/plan/plan.usecases";
+import { deleteOwnAccountUsecase } from "../../application/usecases/user/delete-own-account.usecase";
+import { invoiceRepository } from "../../infrastructure/repositories/invoice.repository";
 
 export const userController = {
     async exportData(req: Request, res: Response) {
@@ -27,6 +29,11 @@ export const userController = {
 
     async purgeData(req: Request, res: Response) {
         const deleted = await purgeUserDataUsecase(auditLogRepository, req.userId, req.body);
+        res.json({ ok: true, deleted });
+    },
+
+    async deleteAccount(req: Request, res: Response) {
+        const deleted = await deleteOwnAccountUsecase(userRepository, auditLogRepository, invoiceRepository, req.userId, req.body);
         res.json({ ok: true, deleted });
     },
 

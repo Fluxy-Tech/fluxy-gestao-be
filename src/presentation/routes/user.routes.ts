@@ -13,6 +13,9 @@ userRoutes.get("/me/export", asyncHandler(userController.exportData));
 // requireActiveBilling, como o export — os dados são do usuário mesmo com a conta bloqueada.
 userRoutes.post("/me/import-device", asyncHandler(userController.importDevice));
 userRoutes.post("/me/purge-data", asyncHandler(userController.purgeData));
+// Exclusão da própria conta com todos os dados (Perfil > Excluir conta). Sem
+// requireActiveBilling: o direito de excluir vale mesmo com a conta bloqueada.
+userRoutes.post("/me/delete-account", asyncHandler(userController.deleteAccount));
 userRoutes.patch("/me/profile", asyncHandler(userController.updateProfile));
 userRoutes.patch("/me/company", asyncHandler(userController.updateCompany));
 userRoutes.patch("/me/brand", asyncHandler(userController.updateBrand));

@@ -17,6 +17,8 @@ import { debtRoutes } from "./src/presentation/routes/debt.routes";
 import { billingRoutes } from "./src/presentation/routes/billing.routes";
 import { asaasWebhookRoutes } from "./src/presentation/routes/asaas-webhook.routes";
 import { assistantRoutes } from "./src/presentation/routes/assistant.routes";
+import { communityRoutes } from "./src/presentation/routes/community.routes";
+import { supportRoutes } from "./src/presentation/routes/support.routes";
 import { errorHandler } from "./src/presentation/error-handler";
 import { scheduleDailyCashReconciliation } from "./src/infrastructure/jobs/daily-cash-reconciliation.job";
 import { scheduleDailyBilling } from "./src/infrastructure/jobs/daily-billing.job";
@@ -52,6 +54,10 @@ app.use("/api/admin", requireAuth, requireAdmin, adminRoutes);
 app.use("/api/expenses", requireAuth, requireActiveBilling, expenseRoutes);
 app.use("/api/debts", requireAuth, requireActiveBilling, debtRoutes);
 app.use("/api/billing", requireAuth, billingRoutes);
+// Sem requireActiveBilling: anúncios e suporte continuam acessíveis com a conta bloqueada
+// (é justamente quando o usuário mais precisa de ajuda).
+app.use("/api/community", requireAuth, communityRoutes);
+app.use("/api/support", requireAuth, supportRoutes);
 app.use("/api/webhooks/asaas", asaasWebhookRoutes);
 app.use("/api/internal/assistant", requireInternalService, assistantRoutes);
 
