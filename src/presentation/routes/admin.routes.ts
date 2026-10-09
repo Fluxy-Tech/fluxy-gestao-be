@@ -3,6 +3,7 @@ import { adminController } from "../controllers/admin.controller";
 import { asyncHandler } from "../error-handler";
 import { communityController } from "../controllers/community.controller";
 import { supportController } from "../controllers/support.controller";
+import { withAnnouncementImage } from "../../infrastructure/storage/upload.middleware";
 
 export const adminRoutes = Router();
 
@@ -19,6 +20,7 @@ adminRoutes.patch("/plans/:planId", asyncHandler(adminController.updatePlan));
 // Comunidade: anúncios para todos os usuários.
 adminRoutes.get("/announcements", asyncHandler(communityController.adminList));
 adminRoutes.post("/announcements", asyncHandler(communityController.adminCreate));
+adminRoutes.post("/announcements/images", withAnnouncementImage, asyncHandler(communityController.adminUploadImage));
 adminRoutes.patch("/announcements/:id", asyncHandler(communityController.adminUpdate));
 adminRoutes.delete("/announcements/:id", asyncHandler(communityController.adminDelete));
 

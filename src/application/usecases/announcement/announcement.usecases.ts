@@ -1,6 +1,9 @@
 import { prisma } from "../../../infrastructure/database/prisma";
 import type { AuditLogRepository } from "../../../domain/repository/audit-log.repository";
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { deleteFromS3, uploadToS3 } from "../../../infrastructure/storage/s3-storage";
 import {
     announcementSchema,
     markAnnouncementsReadSchema,
@@ -27,6 +30,7 @@ export async function listAnnouncementsForUserUsecase(userId: string) {
             title: true,
             body: true,
             kind: true,
+            images: true,
             publishedAt: true,
             reads: { where: { userId }, select: { readAt: true } },
         },
@@ -98,6 +102,8 @@ export async function adminUpdateAnnouncementUsecase(auditLogRepo: AuditLogRepos
         where: { id },
         data: { ...data, ...(republish ? { publishedAt: new Date() } : {}) },
     });
+    // Imagens tiradas do anúncio saem do storage.
+    if (data.images) await deleteImages(current.images.filter((u) => !data.images!.includes(u)));
     await recordAuditLog(auditLogRepo, {
         userId: adminId,
         about: `Anúncio atualizado: ${updated.title}`,
@@ -110,6 +116,7 @@ export async function adminUpdateAnnouncementUsecase(auditLogRepo: AuditLogRepos
 
 export async function adminDeleteAnnouncementUsecase(auditLogRepo: AuditLogRepository, adminId: string, id: string) {
     const deleted = await prisma.announcement.delete({ where: { id } });
+    await deleteImages(deleted.images);
     await recordAuditLog(auditLogRepo, {
         userId: adminId,
         about: `Anúncio excluído: ${deleted.title}`,
@@ -117,4 +124,26 @@ export async function adminDeleteAnnouncementUsecase(auditLogRepo: AuditLogRepos
         entityId: id,
         entityType: "announcement",
     });
+}
+
+// ---------- Imagens ----------
+
+function keyFromUrl(url: string) {
+    const base = process.env.UPLOAD_PUBLIC_BASE_URL;
+    return base && url.startsWith(`${base}/`) ? url.slice(base.length + 1) : null;
+}
+
+async function deleteImages(urls: string[]) {
+    const keys = urls.map(keyFromUrl).filter((k): k is string => !!k);
+    if (keys.length) await deleteFromS3(keys);
+}
+
+// Upload de uma imagem de anúncio (pública, como a logo): devolve a URL para o admin
+// incluir no anúncio ao salvar.
+export async function uploadAnnouncementImageUsecase(file: { originalname: string; mimetype: string; buffer: Buffer } | undefined) {
+    if (!file) throw new Error("Nenhuma imagem enviada.");
+    const ext = (path.extname(file.originalname) || ".jpg").toLowerCase().replace(/[^.a-z0-9]/g, "");
+    const prefix = process.env.SEAWEEDFS_S3_PREFIX ?? "imagensperfil";
+    const key = `${prefix}/announcements/${randomUUID()}${ext}`;
+    return { url: await uploadToS3(key, file.buffer, file.mimetype) };
 }

@@ -5,6 +5,7 @@ import {
     adminDeleteAnnouncementUsecase,
     adminListAnnouncementsUsecase,
     adminUpdateAnnouncementUsecase,
+    uploadAnnouncementImageUsecase,
     listAnnouncementsForUserUsecase,
     markAnnouncementsReadUsecase,
 } from "../../application/usecases/announcement/announcement.usecases";
@@ -31,6 +32,10 @@ export const communityController = {
 
     async adminUpdate(req: Request, res: Response) {
         res.json(serialize(await adminUpdateAnnouncementUsecase(auditLogRepository, req.userId, req.params.id as string, req.body)));
+    },
+
+    async adminUploadImage(req: Request, res: Response) {
+        res.status(201).json(await uploadAnnouncementImageUsecase(req.file));
     },
 
     async adminDelete(req: Request, res: Response) {

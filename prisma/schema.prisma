@@ -585,6 +585,8 @@ model Announcement {
   title       String
   body        String
   kind        AnnouncementKind @default(INFO)
+  // URLs públicas das imagens (até 6), na ordem do carrossel da Comunidade.
+  images      String[]         @default([])
   published   Boolean          @default(true)
   // Data de publicação: entra no sino de quem tinha conta nessa data (contas criadas
   // depois veem o anúncio só no histórico da Comunidade).
