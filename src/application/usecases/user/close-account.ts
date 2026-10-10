@@ -11,7 +11,7 @@ import { ticketAttachmentKeysOfUser } from "../support/support.usecases";
 // (Perfil > Excluir conta) ou pelo admin. Antes de apagar:
 // - cancela no Asaas os boletos pendentes (senão o cliente pagaria uma fatura que não
 //   existe mais aqui);
-// - apaga do storage os anexos de tickets e a logo;
+// - apaga do storage os anexos de tickets, a logo e a foto do perfil;
 // - grava um registro de encerramento (audit_log sem vínculo com o usuário) com o mínimo
 //   que a Política de Privacidade diz que guardamos após a exclusão: identificação,
 //   faturas (obrigação fiscal, 5 anos), aceite dos termos/contrato e últimos acessos
@@ -47,8 +47,10 @@ export async function closeAccountWithAllData(
     const deleted = await userRepo.deleteWithAllData(userId);
 
     const publicBase = process.env.UPLOAD_PUBLIC_BASE_URL;
-    const logoKey = publicBase && user.logoUrl?.startsWith(`${publicBase}/`) ? user.logoUrl.slice(publicBase.length + 1) : null;
-    await deleteFromS3([...attachmentKeys, ...(logoKey ? [logoKey] : [])]);
+    const storedKey = (url: string | null | undefined) =>
+        publicBase && url?.startsWith(`${publicBase}/`) ? url.slice(publicBase.length + 1) : null;
+    const fileKeys = [storedKey(user.logoUrl), storedKey(user.avatarUrl)].filter((k): k is string => !!k);
+    await deleteFromS3([...attachmentKeys, ...fileKeys]);
 
     await recordAuditLog(auditLogRepo, {
         userId: actor.kind === "admin" ? actor.adminId : null,

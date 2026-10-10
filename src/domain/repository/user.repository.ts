@@ -4,6 +4,9 @@ export interface UpdateProfileInput {
     name?: string;
     phone?: string | null;
     theme?: string;
+    // Foto do perfil (menu do usuário na barra lateral). Só pelo upload/remoção da foto,
+    // não pelo PATCH /me/profile (o schema não aceita esse campo).
+    avatarUrl?: string | null;
 }
 
 export interface UpdateCompanyInput {
@@ -21,6 +24,7 @@ export interface UpdateCompanyInput {
     city?: string | null;
     state?: string | null;
     currentCash?: number;
+    useCalendar?: boolean;
 }
 
 export interface UpdateBrandInput {

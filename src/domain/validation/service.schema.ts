@@ -6,7 +6,8 @@ export const createServiceSchema = z.object({
     name: z.string().trim().min(1, "Nome é obrigatório."),
     description: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
-    costPrice: z.number().min(0).optional(),
+    // null/ausente = não informado: o custo vira 40% do preço de venda (domain/service-cost.ts).
+    costPrice: z.number().min(0).nullable().optional(),
     salePrice: z.number().min(0).optional(),
     active: z.boolean().optional(),
     showInCatalog: z.boolean().optional(),

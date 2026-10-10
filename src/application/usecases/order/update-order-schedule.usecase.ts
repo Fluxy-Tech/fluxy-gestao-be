@@ -2,14 +2,14 @@ import type { OrderRepository } from "../../../domain/repository/order.repositor
 import type { UserRepository } from "../../../domain/repository/user.repository";
 import type { AuditLogRepository } from "../../../domain/repository/audit-log.repository";
 import { updateScheduleSchema } from "../../../domain/validation/order.schema";
-import { resolveDeliveryDate, usesScheduling } from "../../../domain/order-scheduling";
+import { collectsTime, resolveDeliveryDate } from "../../../domain/order-scheduling";
 import { invalidateDashboardCache } from "./get-dashboard.usecase";
 import { invalidateOrdersListCache } from "./list-orders.usecase";
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
 
-// Reagendar (mudar dia/horário de uma OS já criada) só faz sentido pra quem usa agenda
-// de horário — Padrão/Laboratório editam a data de entrega pela tela de OS normalmente,
-// não por aqui.
+// Reagendar (mudar dia/horário de uma OS já criada) só faz sentido pra quem coleta horário
+// nas OS (ramo com agenda ou agenda ativa em Empresa) — os demais editam a data de entrega
+// pela tela de OS normalmente, não por aqui.
 export async function updateOrderScheduleUsecase(
     orderRepo: OrderRepository,
     userRepo: UserRepository,
@@ -22,11 +22,11 @@ export async function updateOrderScheduleUsecase(
 
     const user = await userRepo.findById(userId);
     if (!user) throw new Error("Usuário não encontrado.");
-    if (!usesScheduling(user.businessCategory)) {
-        throw new Error("Reagendamento disponível apenas para categorias com agenda de horário.");
+    if (!collectsTime(user)) {
+        throw new Error("Reagendamento disponível apenas com a agenda de horário ativa.");
     }
 
-    const resolved = resolveDeliveryDate(user.businessCategory, deliveryDate);
+    const resolved = resolveDeliveryDate(user, deliveryDate);
     const order = await orderRepo.updateDeliveryDate(orderId, userId, resolved ? new Date(resolved) : null);
     await invalidateDashboardCache(userId);
     await invalidateOrdersListCache(userId);

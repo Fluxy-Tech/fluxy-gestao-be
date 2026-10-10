@@ -24,8 +24,20 @@ async function computeDashboard(orderRepo: OrderRepository, clientRepo: ClientRe
 
     const today = counts.todayOrders.map((o) => ({ ...o, clientName: clientMap.get(o.clientId) ?? "—" }));
 
+    // Faturamento de cada dia da semana corrente (segunda a domingo), mesma regra acima.
+    const weekRevenue = Array.from({ length: 7 }, (_, i) => {
+        const day = new Date(counts.weekStart.getFullYear(), counts.weekStart.getMonth(), counts.weekStart.getDate() + i);
+        const next = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+        const revenue = counts.weekPaid
+            .filter((o) => o.lastPaymentAt && o.lastPaymentAt >= day && o.lastPaymentAt < next)
+            .reduce((s, o) => s + cashRevenue(o), 0);
+        return { date: day.toISOString(), revenue };
+    });
+
     return {
         todayCount: counts.todayCount,
+        yesterdayCount: counts.yesterdayCount,
+        weekRevenue,
         revenue,
         cost,
         margin: revenue - cost,

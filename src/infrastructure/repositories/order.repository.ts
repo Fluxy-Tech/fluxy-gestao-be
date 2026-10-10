@@ -163,11 +163,15 @@ export const orderRepository: OrderRepository = {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        // Semana corrente começando na segunda-feira (getDay: 0 = domingo).
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+        const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 7);
 
-        const [todayOrders, todayPaid] = await prisma.$transaction([
+        const [todayOrders, todayPaid, yesterdayCount, weekPaid] = await prisma.$transaction([
             prisma.order.findMany({
                 where: { userId, createdAt: { gte: todayStart, lt: todayEnd }, deletedAt: null },
-                select: { id: true, numberOrder: true, totalSale: true, statusOrder: true, clientId: true },
+                select: { id: true, numberOrder: true, totalSale: true, statusOrder: true, paymentStatus: true, clientId: true },
                 orderBy: { createdAt: "desc" },
             }),
             prisma.order.findMany({
@@ -180,12 +184,28 @@ export const orderRepository: OrderRepository = {
                 },
                 select: { id: true, totalSale: true, totalCost: true, amountPaid: true, paymentStatus: true },
             }),
+            prisma.order.count({
+                where: { userId, createdAt: { gte: yesterdayStart, lt: todayStart }, deletedAt: null },
+            }),
+            prisma.order.findMany({
+                where: {
+                    userId,
+                    statusOrder: "COMPLETED",
+                    paymentStatus: { in: ["PAID", "PARTIAL"] },
+                    lastPaymentAt: { gte: weekStart, lt: weekEnd },
+                    deletedAt: null,
+                },
+                select: { totalSale: true, totalCost: true, amountPaid: true, paymentStatus: true, lastPaymentAt: true },
+            }),
         ]);
 
         return {
             todayCount: todayOrders.length,
+            yesterdayCount,
             todayOrders,
             todayPaid,
+            weekStart,
+            weekPaid,
         };
     },
 

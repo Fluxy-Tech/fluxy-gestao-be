@@ -3,6 +3,7 @@ import type { AuditLogRepository } from "../../../domain/repository/audit-log.re
 import { updateServiceSchema } from "../../../domain/validation/service.schema";
 import { invalidateServiceCaches } from "./list-services.usecase";
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
+import { defaultCostPrice } from "../../../domain/service-cost";
 
 export async function updateServiceUsecase(
     repo: ServiceRepository,
@@ -11,8 +12,18 @@ export async function updateServiceUsecase(
     id: string,
     input: UpdateServiceInput,
 ) {
-    const data = updateServiceSchema.parse(input);
-    const service = await repo.update(id, userId, data);
+    const { costPrice, ...rest } = updateServiceSchema.parse(input);
+    // Custo apagado na edição (null): volta a ser 40% do preço de venda (o novo, se veio
+    // junto, senão o atual). Ausente: o custo não muda.
+    let resolvedCost: number | undefined = costPrice ?? undefined;
+    if (costPrice === null) {
+        const salePrice = rest.salePrice ?? Number((await repo.findById(id, userId))?.salePrice ?? 0);
+        resolvedCost = defaultCostPrice(salePrice);
+    }
+    const service = await repo.update(id, userId, {
+        ...rest,
+        ...(resolvedCost !== undefined ? { costPrice: resolvedCost } : {}),
+    });
     await invalidateServiceCaches(userId);
     await recordAuditLog(auditRepo, {
         userId,

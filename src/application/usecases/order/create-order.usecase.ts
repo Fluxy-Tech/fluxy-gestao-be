@@ -33,7 +33,7 @@ export async function createOrderUsecase(
 
     const order = await orderRepo.createWithItems(userId, {
         ...data,
-        deliveryDate: resolveDeliveryDate(user.businessCategory, data.deliveryDate),
+        deliveryDate: resolveDeliveryDate(user, data.deliveryDate),
     });
     await invalidateDashboardCache(userId);
     await invalidateOrdersListCache(userId);

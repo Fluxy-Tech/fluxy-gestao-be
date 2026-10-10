@@ -58,8 +58,12 @@ export type OrderWithItems = Order & {
 
 export interface DashboardCounts {
     todayCount: number;
-    todayOrders: Pick<Order, "id" | "numberOrder" | "totalSale" | "statusOrder" | "clientId">[];
+    yesterdayCount: number;
+    todayOrders: Pick<Order, "id" | "numberOrder" | "totalSale" | "statusOrder" | "paymentStatus" | "clientId">[];
     todayPaid: Pick<Order, "id" | "totalSale" | "totalCost" | "amountPaid" | "paymentStatus">[];
+    // OS pagas (total ou parcialmente) na semana corrente, de segunda a domingo.
+    weekStart: Date;
+    weekPaid: Pick<Order, "totalSale" | "totalCost" | "amountPaid" | "paymentStatus" | "lastPaymentAt">[];
 }
 
 export interface OrderRepository {

@@ -21,5 +21,10 @@ userRoutes.patch("/me/company", asyncHandler(userController.updateCompany));
 userRoutes.patch("/me/brand", asyncHandler(userController.updateBrand));
 userRoutes.patch("/me/preferences", asyncHandler(userController.updatePreferences));
 userRoutes.get("/me/plan", asyncHandler(userController.myPlan));
+// Atividade recente do dashboard: últimas ações da conta (log de auditoria).
+userRoutes.get("/me/activity", asyncHandler(userController.activity));
 userRoutes.patch("/me/plan", asyncHandler(userController.changeMyPlan));
 userRoutes.post("/me/logo", uploadLogo, asyncHandler(userController.uploadLogo));
+// Foto do perfil: mesmas regras de arquivo da logo (imagem, até 2 MB).
+userRoutes.post("/me/avatar", uploadLogo, asyncHandler(userController.uploadAvatar));
+userRoutes.delete("/me/avatar", asyncHandler(userController.removeAvatar));

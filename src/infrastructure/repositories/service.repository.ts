@@ -1,9 +1,5 @@
 import { prisma } from "../database/prisma";
-import type {
-    ServiceRepository,
-    CreateServiceInput,
-    UpdateServiceInput,
-} from "../../domain/repository/service.repository";
+import type { ServiceRepository, ServiceData } from "../../domain/repository/service.repository";
 
 export const serviceRepository: ServiceRepository = {
     findAllByUser(userId) {
@@ -31,13 +27,13 @@ export const serviceRepository: ServiceRepository = {
         return prisma.service.findFirst({ where: { id, userId, deletedAt: null } });
     },
 
-    create(userId, data: CreateServiceInput) {
+    create(userId, data: ServiceData) {
         return prisma.service.create({
             data: { ...data, userId },
         });
     },
 
-    update(id, userId, data: UpdateServiceInput) {
+    update(id, userId, data: Partial<ServiceData>) {
         return prisma.service.update({
             where: { id, userId },
             data,

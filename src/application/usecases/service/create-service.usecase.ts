@@ -6,6 +6,7 @@ import { assertPlanLimit } from "../plan/plan-limits";
 import { createServiceSchema } from "../../../domain/validation/service.schema";
 import { invalidateServiceCaches } from "./list-services.usecase";
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
+import { defaultCostPrice } from "../../../domain/service-cost";
 
 export async function createServiceUsecase(
     repo: ServiceRepository,
@@ -15,9 +16,11 @@ export async function createServiceUsecase(
     userId: string,
     input: CreateServiceInput,
 ) {
-    const data = createServiceSchema.parse(input);
+    const parsed = createServiceSchema.parse(input);
     await assertPlanLimit(planRepo, userRepo, userId, "services");
-    const service = await repo.create(userId, data);
+    // Sem preço de custo informado: 40% do preço de venda.
+    const costPrice = parsed.costPrice ?? defaultCostPrice(parsed.salePrice);
+    const service = await repo.create(userId, { ...parsed, costPrice });
     await invalidateServiceCaches(userId);
     await recordAuditLog(auditRepo, {
         userId,

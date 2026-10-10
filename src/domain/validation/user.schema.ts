@@ -29,6 +29,7 @@ export const updateCompanySchema = z.object({
     city: z.string().nullable().optional(),
     state: z.string().nullable().optional(),
     currentCash: z.number().min(0).optional(),
+    useCalendar: z.boolean().optional(),
 });
 
 export const updatePreferencesSchema = z.object({

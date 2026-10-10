@@ -47,11 +47,15 @@ type CompanyRow = {
     state: string | null;
 };
 
+const DEFAULT_BRAND_COLOR = "#8c52ff";
+
 function publicCompany(u: CompanyRow) {
     return {
         name: u.companyName || u.name,
         logoUrl: u.includeLogoInPdf ? u.logoUrl : null,
-        color: u.pdfColor || u.primaryColor,
+        // Páginas públicas (links de OS e nota) usam a "Cor primária" da tela Empresa; o
+        // "Destaque do PDF" fica só para os PDFs. Sem cor válida, o roxo padrão da Fluxy.
+        color: /^#[0-9a-f]{6}$/i.test(u.primaryColor ?? "") ? u.primaryColor : DEFAULT_BRAND_COLOR,
         phone: u.phone,
         email: u.email,
         cnpj: u.cnpj,

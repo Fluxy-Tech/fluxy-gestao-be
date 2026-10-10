@@ -4,8 +4,9 @@ import { userRepository } from "../../infrastructure/repositories/user.repositor
 import { updateProfileUsecase } from "../../domain/user/update-profile.usecase";
 import { updateCompanyUsecase } from "../../domain/user/update-company.usecase";
 import { updateBrandUsecase } from "../../domain/user/update-brand.usecase";
-import { uploadToS3 } from "../../infrastructure/storage/s3-storage";
+import { deleteFromS3, uploadToS3 } from "../../infrastructure/storage/s3-storage";
 import { serialize } from "../serialize";
+import { prisma } from "../../infrastructure/database/prisma";
 import { exportUserDataUsecase } from "../../application/usecases/user/export-user-data.usecase";
 import { importDeviceDataUsecase } from "../../application/usecases/user/import-device-data.usecase";
 import { purgeUserDataUsecase } from "../../application/usecases/user/purge-user-data.usecase";
@@ -57,6 +58,17 @@ export const userController = {
         res.json(serialize(user));
     },
 
+    // Últimas ações da própria conta no log de auditoria (sem login/logout).
+    async activity(req: Request, res: Response) {
+        const logs = await prisma.auditLog.findMany({
+            where: { userId: req.userId, type: { notIn: ["LOGIN", "LOGOUT"] } },
+            select: { id: true, about: true, type: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+            take: 6,
+        });
+        res.json(serialize(logs));
+    },
+
     async myPlan(req: Request, res: Response) {
         res.json(serialize(await getMyPlanUsecase(planRepository, userRepository, req.userId)));
     },
@@ -83,4 +95,38 @@ export const userController = {
         const user = await updateBrandUsecase(userRepository, req.userId, { logoUrl });
         res.json(serialize(user));
     },
+
+    async uploadAvatar(req: Request, res: Response) {
+        if (!req.file) {
+            res.status(400).json({ error: "Nenhum arquivo enviado." });
+            return;
+        }
+        const previous = await userRepository.findById(req.userId);
+        const ext = path.extname(req.file.originalname) || ".png";
+        const prefix = process.env.SEAWEEDFS_S3_PREFIX ?? "imagensperfil";
+        const key = `${prefix}/${req.userId}/avatar-${Date.now()}${ext}`;
+        const avatarUrl = await uploadToS3(key, req.file.buffer, req.file.mimetype);
+        const user = await userRepository.updateProfile(req.userId, { avatarUrl });
+        await deleteStoredFile(previous?.avatarUrl);
+        res.json(serialize(user));
+    },
+
+    async removeAvatar(req: Request, res: Response) {
+        const previous = await userRepository.findById(req.userId);
+        const user = await userRepository.updateProfile(req.userId, { avatarUrl: null });
+        await deleteStoredFile(previous?.avatarUrl);
+        res.json(serialize(user));
+    },
 };
+
+// Apaga do storage um arquivo enviado por nós (URL sob UPLOAD_PUBLIC_BASE_URL), como a foto
+// antiga do perfil ao trocar/remover. Falha aqui não desfaz a troca — só fica o arquivo órfão.
+async function deleteStoredFile(url: string | null | undefined) {
+    const publicBase = process.env.UPLOAD_PUBLIC_BASE_URL;
+    if (!publicBase || !url?.startsWith(`${publicBase}/`)) return;
+    try {
+        await deleteFromS3([url.slice(publicBase.length + 1)]);
+    } catch (err) {
+        console.error("[storage] falha ao apagar arquivo antigo:", (err as Error).message);
+    }
+}
