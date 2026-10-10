@@ -26,6 +26,8 @@ export interface CreateOrderInput {
     paymentMethod?: string | null;
     deliveryDate?: string | null;
     paymentDueDate?: string | null;
+    discount?: number;
+    increase?: number;
     totalCost: number;
     totalSale: number;
     items: CreateOrderItemInput[];
@@ -40,6 +42,8 @@ export interface UpdatePaymentInput {
 
 export interface UpdateOrderItemsInput {
     items: CreateOrderItemInput[];
+    discount?: number;
+    increase?: number;
     totalCost: number;
     totalSale: number;
 }

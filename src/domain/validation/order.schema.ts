@@ -28,6 +28,9 @@ export const createOrderSchema = z
         paymentMethod: z.string().nullable().optional(),
         deliveryDate: z.string().nullable().optional(),
         paymentDueDate: z.string().nullable().optional(),
+        // Desconto/acréscimo gerais da OS, em R$ sobre a soma dos itens.
+        discount: z.number().min(0).optional(),
+        increase: z.number().min(0).optional(),
         totalCost: z.number().min(0),
         totalSale: z.number().min(0),
         items: z.array(createOrderItemSchema).min(1, "Adicione ao menos um serviço."),
@@ -41,6 +44,9 @@ export const createOrderSchema = z
 
 export const updateOrderItemsSchema = z.object({
     items: z.array(createOrderItemSchema).min(1, "Adicione ao menos um serviço."),
+    // Ausentes (ex.: app mobile) = mantém o desconto/acréscimo geral atual da OS.
+    discount: z.number().min(0).optional(),
+    increase: z.number().min(0).optional(),
     totalCost: z.number().min(0),
     totalSale: z.number().min(0),
 });

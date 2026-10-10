@@ -96,6 +96,8 @@ export async function getPublicOrderUsecase(rawId: unknown) {
         canceledAt: order.canceledAt,
         patient: maskPatient(order.patientName),
         client: order.client.name,
+        discount: Number(order.discount),
+        increase: Number(order.increase),
         total: Number(order.totalSale),
         amountPaid: Number(order.amountPaid),
         items: itemsOf(order.orderItems),

@@ -238,6 +238,8 @@ export const orderRepository: OrderRepository = {
                     paymentMethod: data.paymentMethod ?? null,
                     deliveryDate,
                     paymentDueDate: data.paymentDueDate ? new Date(data.paymentDueDate) : null,
+                    discount: data.discount ?? 0,
+                    increase: data.increase ?? 0,
                     totalCost: data.totalCost,
                     totalSale: data.totalSale,
                     createdBy: userId,
@@ -287,7 +289,12 @@ export const orderRepository: OrderRepository = {
 
             return tx.order.update({
                 where: { id, userId },
-                data: { totalCost: data.totalCost, totalSale: data.totalSale },
+                data: {
+                    totalCost: data.totalCost,
+                    totalSale: data.totalSale,
+                    ...(data.discount !== undefined ? { discount: data.discount } : {}),
+                    ...(data.increase !== undefined ? { increase: data.increase } : {}),
+                },
             });
         });
     },

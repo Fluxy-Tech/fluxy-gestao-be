@@ -31,6 +31,8 @@ async function generateOccurrence(template: Template, occurrenceDate: Date): Pro
                 paymentMethod: template.paymentMethod,
                 entryDate: occurrenceDate,
                 deliveryDate: occurrenceDate,
+                discount: template.discount,
+                increase: template.increase,
                 totalCost: template.totalCost,
                 totalSale: template.totalSale,
                 createdBy: template.userId,

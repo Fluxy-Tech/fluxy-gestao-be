@@ -305,6 +305,11 @@ model Order {
   canceledAt        DateTime?
   cancelReason      String?
   notes             String?
+  // Desconto/acréscimo gerais da OS, em R$, aplicados sobre a soma dos itens:
+  // totalSale = soma(finalPrice dos itens) + increase - discount. Os campos de mesmo nome
+  // em OrderItem ficam só para OS antigas e para o app mobile.
+  discount          Decimal       @default(0) @db.Decimal(14, 2)
+  increase          Decimal       @default(0) @db.Decimal(14, 2)
   totalCost         Decimal       @default(0) @db.Decimal(14, 2)
   totalSale         Decimal       @default(0) @db.Decimal(14, 2)
   createdBy         String?
