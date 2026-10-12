@@ -237,7 +237,10 @@ export const orderRepository: OrderRepository = {
                     notes: data.notes ?? null,
                     paymentMethod: data.paymentMethod ?? null,
                     deliveryDate,
-                    paymentDueDate: data.paymentDueDate ? new Date(data.paymentDueDate) : null,
+                    // Só a data ("yyyy-mm-dd"): meio-dia de Brasília, pra não cair no dia anterior no fuso local.
+                    paymentDueDate: data.paymentDueDate
+                        ? new Date(`${data.paymentDueDate.slice(0, 10)}T12:00:00-03:00`)
+                        : null,
                     discount: data.discount ?? 0,
                     increase: data.increase ?? 0,
                     totalCost: data.totalCost,
@@ -329,6 +332,13 @@ export const orderRepository: OrderRepository = {
         return prisma.order.update({
             where: { id, userId },
             data: { notes },
+        });
+    },
+
+    updatePaymentDueDate(id, userId, paymentDueDate) {
+        return prisma.order.update({
+            where: { id, userId },
+            data: { paymentDueDate },
         });
     },
 

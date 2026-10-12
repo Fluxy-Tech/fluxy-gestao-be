@@ -64,6 +64,13 @@ export const updateNotesSchema = z.object({
     notes: z.string().nullable(),
 });
 
+export const updatePaymentDueDateSchema = z.object({
+    paymentDueDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Data prevista de pagamento inválida.")
+        .nullable(),
+});
+
 export const updateScheduleSchema = z.object({
     deliveryDate: z.string().min(1, "Informe a data e hora do agendamento."),
 });

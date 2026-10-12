@@ -20,5 +20,6 @@ orderRoutes.patch("/:id/payment-status", asyncHandler(orderController.updatePaym
 orderRoutes.patch("/:id/items", asyncHandler(orderController.updateItems));
 orderRoutes.patch("/:id/schedule", asyncHandler(orderController.updateSchedule));
 orderRoutes.patch("/:id/notes", asyncHandler(orderController.updateNotes));
+orderRoutes.patch("/:id/payment-due-date", asyncHandler(orderController.updatePaymentDueDate));
 orderRoutes.post("/:id/stop-recurrence", asyncHandler(orderController.stopRecurrence));
 orderRoutes.delete("/:id", asyncHandler(orderController.remove));
