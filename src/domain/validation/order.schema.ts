@@ -64,6 +64,10 @@ export const updateNotesSchema = z.object({
     notes: z.string().nullable(),
 });
 
+export const updatePatientNameSchema = z.object({
+    patientName: z.string().max(200).nullable(),
+});
+
 export const updatePaymentDueDateSchema = z.object({
     paymentDueDate: z
         .string()

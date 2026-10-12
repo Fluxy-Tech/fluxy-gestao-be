@@ -335,6 +335,13 @@ export const orderRepository: OrderRepository = {
         });
     },
 
+    updatePatientName(id, userId, patientName) {
+        return prisma.order.update({
+            where: { id, userId },
+            data: { patientName },
+        });
+    },
+
     updatePaymentDueDate(id, userId, paymentDueDate) {
         return prisma.order.update({
             where: { id, userId },
