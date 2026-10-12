@@ -3,6 +3,7 @@ import type { AuditLogRepository } from "../../../domain/repository/audit-log.re
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
 import { invalidateDashboardCache } from "./get-dashboard.usecase";
 import { invalidateOrdersListCache } from "./list-orders.usecase";
+import { invalidate, cacheKey } from "../../../infrastructure/cache/cache";
 
 export async function deleteOrderUsecase(
     repo: OrderRepository,
@@ -16,6 +17,8 @@ export async function deleteOrderUsecase(
     await repo.softDelete(id, userId);
     await invalidateDashboardCache(userId);
     await invalidateOrdersListCache(userId);
+    // A exclusão devolve ao cliente o saldo usado nesta OS.
+    await invalidate(cacheKey("clients", userId));
     await recordAuditLog(auditRepo, {
         userId,
         about: `OS #${order.numberOrder} excluída`,

@@ -8,6 +8,7 @@ import type {
 } from "../../domain/repository/order.repository";
 import type { OrderStatus } from "../../../generated/prisma/client";
 import { nextOrderOccurrence } from "../../domain/order-recurrence";
+import { addOverpaymentCredit, applyCreditMovement, settleCreditUsage } from "./client-credit";
 
 export const orderRepository: OrderRepository = {
     findOpenByUser(userId) {
@@ -315,9 +316,39 @@ export const orderRepository: OrderRepository = {
     },
 
     updatePaymentStatus(id, userId, data: UpdatePaymentInput) {
-        return prisma.order.update({
-            where: { id, userId },
-            data: { paymentStatus: data.paymentStatus, amountPaid: data.amountPaid, lastPaymentAt: new Date() },
+        return prisma.$transaction(async (tx) => {
+            const current = await tx.order.findFirstOrThrow({
+                where: { id, userId },
+                select: { clientId: true, numberOrder: true, creditUsed: true },
+            });
+            const label = `OS #${current.numberOrder}`;
+            const creditUsed = await settleCreditUsage(tx, {
+                userId,
+                clientId: current.clientId,
+                currentCreditUsed: Number(current.creditUsed),
+                useCredit: data.useCredit ?? 0,
+                amountPaid: data.amountPaid,
+                label,
+                orderId: id,
+            });
+            if (data.overpayment) {
+                await addOverpaymentCredit(tx, {
+                    userId,
+                    clientId: current.clientId,
+                    amount: data.overpayment,
+                    label,
+                    orderId: id,
+                });
+            }
+            return tx.order.update({
+                where: { id, userId },
+                data: {
+                    paymentStatus: data.paymentStatus,
+                    amountPaid: data.amountPaid,
+                    creditUsed,
+                    lastPaymentAt: new Date(),
+                },
+            });
         });
     },
 
@@ -357,9 +388,21 @@ export const orderRepository: OrderRepository = {
     },
 
     async softDelete(id, userId) {
-        await prisma.order.update({
-            where: { id, userId },
-            data: { deletedAt: new Date() },
+        await prisma.$transaction(async (tx) => {
+            const order = await tx.order.update({
+                where: { id, userId },
+                data: { deletedAt: new Date() },
+            });
+            // Saldo do cliente usado nesta OS volta para ele.
+            await applyCreditMovement(tx, {
+                userId,
+                clientId: order.clientId,
+                type: "IN",
+                origin: "PAYMENT_REVERSAL",
+                amount: Number(order.creditUsed),
+                description: `Devolvido da OS #${order.numberOrder} (excluída)`,
+                orderId: order.id,
+            });
         });
     },
 };

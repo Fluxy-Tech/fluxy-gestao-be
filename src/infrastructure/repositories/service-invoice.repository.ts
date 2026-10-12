@@ -5,6 +5,7 @@ import type {
     ListServiceInvoiceFilters,
     ServiceInvoiceRepository,
 } from "../../domain/repository/service-invoice.repository";
+import { addOverpaymentCredit, settleCreditUsage } from "./client-credit";
 
 const includeClientAndOrders = {
     client: { select: { name: true } },
@@ -13,8 +14,15 @@ const includeClientAndOrders = {
 
 // Distribui o valor pago da nota entre as OS vinculadas, da mais antiga para a mais nova:
 // cada OS recebe até o seu total antes de passar para a próxima. Assim o pagamento parcial
-// da nota chega ao caixa (que soma o amountPaid das OS — ver reconcileUserCash).
-async function distributeInvoicePayment(tx: Prisma.TransactionClient, invoiceId: string, amountPaid: number) {
+// da nota chega ao caixa (que soma o amountPaid das OS — ver reconcileUserCash). A parte
+// paga com saldo do cliente (creditUsed) é distribuída do mesmo jeito, preenchendo
+// primeiro as mesmas OS, para o caixa descontá-la.
+async function distributeInvoicePayment(
+    tx: Prisma.TransactionClient,
+    invoiceId: string,
+    amountPaid: number,
+    creditUsed: number,
+) {
     const orders = await tx.order.findMany({
         where: { serviceInvoiceId: invoiceId },
         select: { id: true, totalSale: true },
@@ -23,14 +31,17 @@ async function distributeInvoicePayment(tx: Prisma.TransactionClient, invoiceId:
 
     const now = new Date();
     let remaining = amountPaid;
+    let creditRemaining = creditUsed;
     for (const order of orders) {
         const total = Number(order.totalSale);
         const paid = Math.min(remaining, total);
         remaining = Math.max(0, remaining - paid);
+        const credit = Math.min(creditRemaining, paid);
+        creditRemaining = Math.max(0, creditRemaining - credit);
         const paymentStatus = paid <= 0 ? "PENDING" : paid >= total ? "PAID" : "PARTIAL";
         await tx.order.update({
             where: { id: order.id },
-            data: { paymentStatus, amountPaid: paid, lastPaymentAt: now },
+            data: { paymentStatus, amountPaid: paid, creditUsed: credit, lastPaymentAt: now },
         });
     }
 }
@@ -194,7 +205,7 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
                 if (Number(invoice.amountPaid) >= totalAmount) {
                     throw new Error("O valor já pago da nota é maior ou igual ao novo total. Ajuste o pagamento antes.");
                 }
-                await distributeInvoicePayment(tx, id, Number(invoice.amountPaid));
+                await distributeInvoicePayment(tx, id, Number(invoice.amountPaid), Number(invoice.creditUsed));
             }
 
             return tx.serviceInvoice.update({
@@ -215,12 +226,33 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
         return prisma.$transaction(async (tx) => {
             const current = await tx.serviceInvoice.findFirstOrThrow({ where: { id, userId } });
             const amountPaid = data.paymentStatus === "PAID" ? Number(current.totalAmount) : data.amountPaid;
+            const label = `nota #${current.number}`;
+
+            const creditUsed = await settleCreditUsage(tx, {
+                userId,
+                clientId: current.clientId,
+                currentCreditUsed: Number(current.creditUsed),
+                useCredit: data.useCredit ?? 0,
+                amountPaid,
+                label,
+                serviceInvoiceId: id,
+            });
+            if (data.overpayment) {
+                await addOverpaymentCredit(tx, {
+                    userId,
+                    clientId: current.clientId,
+                    amount: data.overpayment,
+                    label,
+                    serviceInvoiceId: id,
+                });
+            }
 
             const invoice = await tx.serviceInvoice.update({
                 where: { id, userId },
                 data: {
                     paymentStatus: data.paymentStatus,
                     amountPaid,
+                    creditUsed,
                     ...(data.paymentStatus === "PAID" ? { status: "SETTLED", settledAt: new Date() } : {}),
                 },
                 include: includeClientAndOrders,
@@ -228,7 +260,7 @@ export const serviceInvoiceRepository: ServiceInvoiceRepository = {
 
             // Quitada: toda OS vinculada fica paga pelo próprio total, mesmo que algum total
             // tenha mudado depois da emissão.
-            await distributeInvoicePayment(tx, id, data.paymentStatus === "PAID" ? Infinity : amountPaid);
+            await distributeInvoicePayment(tx, id, data.paymentStatus === "PAID" ? Infinity : amountPaid, creditUsed);
             return invoice;
         });
     },

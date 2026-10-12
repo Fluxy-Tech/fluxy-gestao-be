@@ -126,6 +126,7 @@ model User {
   invoices          Invoice[]
   cashMovements     CashMovement[]
   serviceInvoices   ServiceInvoice[]
+  clientCredits     ClientCreditMovement[]
   announcementReads AnnouncementRead[]
   tickets           Ticket[]
   ticketMessages    TicketMessage[]
@@ -225,14 +226,19 @@ model Client {
   laborRate     Decimal   @default(0) @db.Decimal(6, 2)
   discount      Decimal   @default(0) @db.Decimal(6, 2)
   increase      Decimal   @default(0) @db.Decimal(6, 2)
+  // Saldo (crédito) do cliente: valor recebido a mais que fica guardado para abater em
+  // pagamentos futuros de OS/notas. Sempre igual à soma das ClientCreditMovement do
+  // cliente (IN - OUT) — mantido aqui para leitura rápida e travar uso acima do saldo.
+  creditBalance Decimal   @default(0) @db.Decimal(14, 2)
   active        Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders          Order[]
   serviceInvoices ServiceInvoice[]
+  creditMovements ClientCreditMovement[]
 
   @@index([userId])
   @@map("client")
@@ -299,6 +305,10 @@ model Order {
   // atual e o que já foi contado, então o botão "Atualizar Caixa atual" pode ser clicado
   // quantas vezes quiser, sem qualquer limite de uma vez por dia.
   cashCountedAmount Decimal       @default(0) @db.Decimal(14, 2)
+  // Parte do amountPaid que foi paga com o saldo do cliente (ver ClientCreditMovement).
+  // Esse dinheiro já entrou no caixa quando o crédito foi recebido, então a conciliação
+  // de caixa desconta este valor para não contar em dobro.
+  creditUsed        Decimal       @default(0) @db.Decimal(14, 2)
   entryDate         DateTime      @default(now())
   deliveryDate      DateTime?
   completedAt       DateTime?
@@ -333,12 +343,13 @@ model Order {
   // service-invoice.repository.ts), e nesse caso o campo é reatribuído para a nova nota.
   serviceInvoiceId String?
 
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client            Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client            Client                 @relation(fields: [clientId], references: [id], onDelete: Restrict)
   orderItems        OrderItem[]
-  recurringParent   Order?          @relation("OrderRecurrence", fields: [recurringParentId], references: [id], onDelete: SetNull)
-  recurringChildren Order[]         @relation("OrderRecurrence")
-  serviceInvoice    ServiceInvoice? @relation(fields: [serviceInvoiceId], references: [id], onDelete: SetNull)
+  recurringParent   Order?                 @relation("OrderRecurrence", fields: [recurringParentId], references: [id], onDelete: SetNull)
+  recurringChildren Order[]                @relation("OrderRecurrence")
+  serviceInvoice    ServiceInvoice?        @relation(fields: [serviceInvoiceId], references: [id], onDelete: SetNull)
+  creditMovements   ClientCreditMovement[]
 
   @@unique([userId, numberOrder])
   @@index([userId])
@@ -404,15 +415,19 @@ model ServiceInvoice {
   // o caixa refletir o recebimento.
   paymentStatus PaymentStatus        @default(PENDING)
   amountPaid    Decimal              @default(0) @db.Decimal(14, 2)
+  // Parte do amountPaid paga com o saldo do cliente — distribuída entre as OS junto com
+  // o pagamento (ver distributeInvoicePayment).
+  creditUsed    Decimal              @default(0) @db.Decimal(14, 2)
   settledAt     DateTime?
   canceledAt    DateTime?
   cancelReason  String?
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  orders Order[]
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client          Client                 @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  orders          Order[]
+  creditMovements ClientCreditMovement[]
 
   @@unique([userId, number])
   @@index([userId])
@@ -420,6 +435,51 @@ model ServiceInvoice {
   @@index([status])
   @@index([issueDate])
   @@map("service_invoice")
+}
+
+// Extrato do saldo do cliente. IN soma ao saldo, OUT subtrai. Origens:
+// OVERPAYMENT = valor recebido acima do total de uma OS/nota (IN);
+// MANUAL = lançamento manual na tela do cliente (IN = adiantamento, OUT = devolução/ajuste);
+// PAYMENT = saldo usado para pagar uma OS/nota (OUT);
+// PAYMENT_REVERSAL = pagamento com saldo desfeito/reduzido, o saldo volta (IN).
+// affectsCash marca as movimentações em que dinheiro de verdade entrou/saiu (excedente e,
+// se o usuário escolher, as manuais); a conciliação de caixa soma/subtrai cada uma uma
+// única vez e marca cashCounted (ver reconcileUserCash). Uso de saldo nunca mexe no caixa.
+enum ClientCreditType {
+  IN
+  OUT
+}
+
+enum ClientCreditOrigin {
+  OVERPAYMENT
+  MANUAL
+  PAYMENT
+  PAYMENT_REVERSAL
+}
+
+model ClientCreditMovement {
+  id               String             @id @default(cuid())
+  userId           String
+  clientId         String
+  type             ClientCreditType
+  origin           ClientCreditOrigin
+  amount           Decimal            @db.Decimal(14, 2)
+  description      String?
+  orderId          String?
+  serviceInvoiceId String?
+  affectsCash      Boolean            @default(false)
+  cashCounted      Boolean            @default(false)
+  occurredAt       DateTime           @default(now())
+  createdAt        DateTime           @default(now())
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  order          Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  serviceInvoice ServiceInvoice? @relation(fields: [serviceInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([clientId])
+  @@map("client_credit_movement")
 }
 
 // ===================== Financeiro =====================

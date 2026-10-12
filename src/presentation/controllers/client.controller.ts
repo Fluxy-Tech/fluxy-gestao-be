@@ -9,6 +9,8 @@ import { createClientUsecase } from "../../application/usecases/client/create-cl
 import { updateClientUsecase } from "../../application/usecases/client/update-client.usecase";
 import { deleteClientUsecase } from "../../application/usecases/client/delete-client.usecase";
 import { listOrdersByClientUsecase } from "../../application/usecases/order/list-orders.usecase";
+import { clientCreditRepository } from "../../infrastructure/repositories/client-credit.repository";
+import { addClientCreditUsecase, getClientCreditUsecase } from "../../application/usecases/client/client-credit.usecase";
 import { serialize } from "../serialize";
 
 export const clientController = {
@@ -42,5 +44,21 @@ export const clientController = {
     async orders(req: Request, res: Response) {
         const orders = await listOrdersByClientUsecase(orderRepository, req.userId, req.params.id as string);
         res.json(serialize(orders));
+    },
+
+    async credit(req: Request, res: Response) {
+        const statement = await getClientCreditUsecase(clientCreditRepository, req.userId, req.params.id as string);
+        res.json(serialize(statement));
+    },
+
+    async addCredit(req: Request, res: Response) {
+        const statement = await addClientCreditUsecase(
+            clientCreditRepository,
+            auditLogRepository,
+            req.userId,
+            req.params.id as string,
+            req.body,
+        );
+        res.status(201).json(serialize(statement));
     },
 };

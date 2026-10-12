@@ -18,6 +18,10 @@ export const updateServiceInvoiceOrdersSchema = z.object({
 export const updateServiceInvoicePaymentSchema = z.object({
     paymentStatus: z.enum(["PENDING", "PARTIAL", "PAID"]),
     amountPaid: z.number().min(0).optional(),
+    // Saldo do cliente usado agora neste pagamento.
+    useCredit: z.number().min(0).optional(),
+    // Valor recebido acima do total (só com pagamento completo) — vira saldo do cliente.
+    overpayment: z.number().min(0).optional(),
 });
 
 export const listServiceInvoicesQuerySchema = z.object({

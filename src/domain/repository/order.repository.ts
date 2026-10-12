@@ -38,6 +38,10 @@ export interface CreateOrderInput {
 export interface UpdatePaymentInput {
     paymentStatus: PaymentStatus;
     amountPaid: number;
+    // Saldo do cliente usado agora neste pagamento (sai do saldo).
+    useCredit?: number;
+    // Valor recebido acima do total da OS — vira saldo do cliente.
+    overpayment?: number;
 }
 
 export interface UpdateOrderItemsInput {

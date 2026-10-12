@@ -9,6 +9,10 @@ export interface CreateServiceInvoiceInput {
 export interface UpdateServiceInvoicePaymentInput {
     paymentStatus: "PENDING" | "PARTIAL" | "PAID";
     amountPaid: number;
+    // Saldo do cliente usado agora neste pagamento (sai do saldo).
+    useCredit?: number;
+    // Valor recebido acima do total da nota — vira saldo do cliente.
+    overpayment?: number;
 }
 
 export interface ListServiceInvoiceFilters {

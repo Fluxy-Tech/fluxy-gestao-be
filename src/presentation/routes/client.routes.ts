@@ -10,3 +10,5 @@ clientRoutes.post("/", idempotentCreate("client"), asyncHandler(clientController
 clientRoutes.patch("/:id", asyncHandler(clientController.update));
 clientRoutes.delete("/:id", asyncHandler(clientController.remove));
 clientRoutes.get("/:id/orders", asyncHandler(clientController.orders));
+clientRoutes.get("/:id/credit", asyncHandler(clientController.credit));
+clientRoutes.post("/:id/credit", asyncHandler(clientController.addCredit));

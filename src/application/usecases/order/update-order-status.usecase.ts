@@ -5,6 +5,7 @@ import { invalidateDashboardCache } from "./get-dashboard.usecase";
 import { invalidateOrdersListCache } from "./list-orders.usecase";
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
 import { reconcileCashForUser } from "../../../infrastructure/jobs/daily-cash-reconciliation.job";
+import { invalidate, cacheKey } from "../../../infrastructure/cache/cache";
 
 export async function completeOrderUsecase(
     repo: OrderRepository,
@@ -118,7 +119,11 @@ export async function updatePaymentStatusUsecase(
     id: string,
     input: unknown,
 ) {
-    const { paymentStatus, amountPaid: requestedAmountPaid } = updatePaymentStatusSchema.parse(input);
+    const { paymentStatus, amountPaid: requestedAmountPaid, useCredit, overpayment } =
+        updatePaymentStatusSchema.parse(input);
+    if (overpayment && paymentStatus !== "PAID") {
+        throw new Error("Valor recebido a mais só pode ser lançado com pagamento completo.");
+    }
 
     const existing = await repo.findDetailById(id, userId);
     if (!existing) throw new Error("Ordem de serviço não encontrada.");
@@ -137,16 +142,17 @@ export async function updatePaymentStatusUsecase(
         amountPaid = 0;
     }
 
-    const order = await repo.updatePaymentStatus(id, userId, { paymentStatus, amountPaid });
+    const order = await repo.updatePaymentStatus(id, userId, { paymentStatus, amountPaid, useCredit, overpayment });
     await invalidateDashboardCache(userId);
     await invalidateOrdersListCache(userId);
+    await invalidate(cacheKey("clients", userId));
     await recordAuditLog(auditRepo, {
         userId,
         about: `Pagamento da OS #${order.numberOrder} atualizado para ${paymentStatus}`,
         type: "PAYMENT",
         entityId: order.id,
         entityType: "Order",
-        metadata: { paymentStatus, amountPaid },
+        metadata: { paymentStatus, amountPaid, useCredit: useCredit ?? 0, overpayment: overpayment ?? 0 },
     });
     // É aqui que o dinheiro efetivamente entra (cashRevenue depende de paymentStatus) —
     // atualiza o caixa na hora, em vez de depender do botão manual ou do job noturno.

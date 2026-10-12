@@ -28,6 +28,11 @@ function pendingExpenseOccurrences(e: Expense, now: Date): Date[] {
 // subtrai a saída de caixa das despesas pagas (status PAID; pendentes não afetam o
 // caixa real ainda).
 //
+// Saldo de cliente: a parte de uma OS paga com saldo (creditUsed) não entra de novo — esse
+// dinheiro já entrou quando o crédito foi recebido, pela movimentação de saldo com
+// affectsCash (excedente de pagamento ou lançamento manual), que é contada uma única vez
+// e marcada com cashCounted.
+//
 // Nem o lado das OS nem o das despesas usa uma janela de tempo compartilhada: cada OS
 // guarda quanto do seu valor em caixa (cashRevenue) já foi somado ao currentCash, em
 // `cashCountedAmount`, e cada despesa guarda até que instante suas ocorrências pagas já
@@ -42,7 +47,7 @@ async function reconcileUserCash(
 ): Promise<{ currentCash: number; skipped: boolean }> {
     const now = new Date();
 
-    const [cashOrders, paidExpenses] = await Promise.all([
+    const [cashOrders, paidExpenses, creditMovements] = await Promise.all([
         prisma.order.findMany({
             where: {
                 userId,
@@ -52,24 +57,40 @@ async function reconcileUserCash(
             },
             select: {
                 id: true, numberOrder: true, totalSale: true, totalCost: true, amountPaid: true,
-                paymentStatus: true, cashCountedAmount: true, lastPaymentAt: true,
+                paymentStatus: true, cashCountedAmount: true, lastPaymentAt: true, creditUsed: true,
             },
         }),
         prisma.expense.findMany({
             where: { userId, deletedAt: null, status: "PAID" },
+        }),
+        prisma.clientCreditMovement.findMany({
+            where: { userId, affectsCash: true, cashCounted: false },
+            select: {
+                id: true, type: true, amount: true, description: true, occurredAt: true,
+                client: { select: { name: true } },
+            },
         }),
     ]);
 
     const pendingDeltas = cashOrders
         .map((o) => ({
             id: o.id,
-            delta: cashRevenue(o) - Number(o.cashCountedAmount),
+            delta: cashRevenue(o) - Number(o.creditUsed) - Number(o.cashCountedAmount),
             numberOrder: o.numberOrder,
             paymentStatus: o.paymentStatus,
             occurredAt: o.lastPaymentAt ?? now,
         }))
         .filter((o) => o.delta > 0);
     const revenue = pendingDeltas.reduce((s, o) => s + o.delta, 0);
+
+    const creditEntries = creditMovements.map((m) => ({
+        id: m.id,
+        type: m.type,
+        amount: Number(m.amount),
+        description: `Saldo de ${m.client.name}${m.description ? ` — ${m.description}` : ""}`,
+        occurredAt: m.occurredAt,
+    }));
+    const creditNet = creditEntries.reduce((s, m) => s + (m.type === "IN" ? m.amount : -m.amount), 0);
 
     const outflowEntries: { description: string; amount: number; occurredAt: Date }[] = [];
     const expenseWatermarks: { id: string; countedUntil: Date }[] = [];
@@ -83,11 +104,11 @@ async function reconcileUserCash(
     }
     const outflow = outflowEntries.reduce((s, e) => s + e.amount, 0);
 
-    if (revenue === 0 && outflow === 0) {
+    if (revenue === 0 && outflow === 0 && creditEntries.length === 0) {
         return { currentCash, skipped: true };
     }
 
-    const newCash = currentCash + revenue - outflow;
+    const newCash = currentCash + revenue - outflow + creditNet;
     await prisma.$transaction([
         prisma.user.update({ where: { id: userId }, data: { currentCash: newCash, cashReconciledAt: now } }),
         ...pendingDeltas.map((o) =>
@@ -96,6 +117,10 @@ async function reconcileUserCash(
         ...expenseWatermarks.map((e) =>
             prisma.expense.update({ where: { id: e.id }, data: { cashCountedUntil: e.countedUntil } }),
         ),
+        prisma.clientCreditMovement.updateMany({
+            where: { id: { in: creditEntries.map((m) => m.id) } },
+            data: { cashCounted: true },
+        }),
         prisma.cashMovement.createMany({
             data: [
                 ...pendingDeltas.map((o) => ({
@@ -111,6 +136,13 @@ async function reconcileUserCash(
                     amount: e.amount,
                     description: `Despesa: ${e.description}`,
                     occurredAt: e.occurredAt,
+                })),
+                ...creditEntries.map((m) => ({
+                    userId,
+                    type: m.type,
+                    amount: m.amount,
+                    description: m.description,
+                    occurredAt: m.occurredAt,
                 })),
             ],
         }),

@@ -5,6 +5,7 @@ import { invalidateDashboardCache } from "../order/get-dashboard.usecase";
 import { invalidateOrdersListCache } from "../order/list-orders.usecase";
 import { recordAuditLog } from "../audit/record-audit-log.usecase";
 import { reconcileCashForUser } from "../../../infrastructure/jobs/daily-cash-reconciliation.job";
+import { invalidate, cacheKey } from "../../../infrastructure/cache/cache";
 
 const PAYMENT_LABEL = { PENDING: "pendente", PARTIAL: "parcial", PAID: "completo" } as const;
 
@@ -15,7 +16,11 @@ export async function updateServiceInvoicePaymentUsecase(
     id: string,
     input: unknown,
 ) {
-    const { paymentStatus, amountPaid: requestedAmountPaid } = updateServiceInvoicePaymentSchema.parse(input);
+    const { paymentStatus, amountPaid: requestedAmountPaid, useCredit, overpayment } =
+        updateServiceInvoicePaymentSchema.parse(input);
+    if (overpayment && paymentStatus !== "PAID") {
+        throw new Error("Valor recebido a mais só pode ser lançado com pagamento completo.");
+    }
 
     const existing = await repo.findDetailById(id, userId);
     if (!existing) throw new Error("Nota fiscal não encontrada.");
@@ -35,16 +40,17 @@ export async function updateServiceInvoicePaymentUsecase(
         amountPaid = requestedAmountPaid;
     }
 
-    const invoice = await repo.updatePayment(id, userId, { paymentStatus, amountPaid });
+    const invoice = await repo.updatePayment(id, userId, { paymentStatus, amountPaid, useCredit, overpayment });
     await invalidateOrdersListCache(userId);
     await invalidateDashboardCache(userId);
+    await invalidate(cacheKey("clients", userId));
     await recordAuditLog(auditRepo, {
         userId,
         about: `Pagamento da nota fiscal #${invoice.number} atualizado para ${PAYMENT_LABEL[paymentStatus]}`,
         type: "PAYMENT",
         entityId: invoice.id,
         entityType: "ServiceInvoice",
-        metadata: { paymentStatus, amountPaid },
+        metadata: { paymentStatus, amountPaid, useCredit: useCredit ?? 0, overpayment: overpayment ?? 0 },
     });
     // O valor pago foi distribuído entre as OS vinculadas — atualiza o caixa na hora.
     await reconcileCashForUser(userId).catch((err) => console.error("[cash-reconciliation] falhou:", err));
